@@ -8,14 +8,16 @@ import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import Messages from "./pages/Messages";
 import CreatePost from "./pages/CreatePost";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminNavBar from "./components/AdminNavBar";
 
-function App() {
+function AppContent() {
   const token = localStorage.getItem("token");
+  const isAdmin = localStorage.getItem("role") === "admin";
 
   return (
-    <BrowserRouter>
-      <div className="app-shell">
-      <NavBar />
+    <div className="app-shell">
+      {token && isAdmin ? <AdminNavBar /> : <NavBar />}
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -25,10 +27,18 @@ function App() {
         <Route path="/posts/:id" element={token ? <PostDetail /> : <Navigate to="/login" />} />
         <Route path="/profile/:id" element={token ? <Profile /> : <Navigate to="/login" />} />
         <Route path="/dashboard" element={token ? <Dashboard /> : <Navigate to="/login" />} />
+        <Route path="/admin" element={token ? <AdminDashboard /> : <Navigate to="/login" />} />
         <Route path="/create-post" element={token ? <CreatePost /> : <Navigate to="/login" />} />
         <Route path="/posts/:id/edit" element={token ? <CreatePost /> : <Navigate to="/login" />} />
       </Routes>
-      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 }

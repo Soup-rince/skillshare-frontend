@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getPostById } from "../api";
+import { getPostById, deletePost } from "../api";
+
 
 function PostDetail() {
   const { id } = useParams();
@@ -8,6 +9,9 @@ function PostDetail() {
   const [post, setPost] = useState(null);
   const [error, setError] = useState("");
   const myId = localStorage.getItem("userId");
+  const token = localStorage.getItem("token");
+  const [actionError, setActionError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -16,6 +20,26 @@ function PostDetail() {
     };
     fetchPost();
   }, [id]);
+  const handleDelete = async () => {
+  const confirmed = window.confirm(
+    "Delete this post? This action cannot be undone."
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setDeleting(true);
+    setActionError("");
+    await deletePost(id, token);
+    navigate("/dashboard");
+  } catch (err) {
+    setActionError(
+      err.response?.data?.message || "Unable to delete this post."
+    );
+  } finally {
+    setDeleting(false);
+  }
+};
 
   if (error) return <main className="page-container"><div className="empty-state"><h2>{error}</h2><Link className="button-secondary" to="/browse">Back to Browse</Link></div></main>;
   if (!post) return <main className="page-container"><div className="empty-state"><p>Loading skill post...</p></div></main>;
@@ -27,7 +51,36 @@ function PostDetail() {
         <div className="tag-row"><span className={`tag ${post.postType === "offer" ? "tag-offer" : "tag-request"}`}>{post.postType}</span><span className="tag tag-neutral">{post.category}</span><span className="tag tag-neutral">{post.proficiencyLevel}</span></div>
         <h1 className="detail-title">{post.title}</h1>
         <p className="detail-copy">{post.description}</p>
-        {post.owner?._id !== myId && <button className="button" style={{ marginTop: 28 }} onClick={() => navigate(`/messages?to=${post.owner._id}`)}>Message {post.owner?.name}</button>}
+        {actionError && (
+  <p className="alert" style={{ marginTop: 24 }}>
+    {actionError}
+  </p>
+)}
+
+{post.owner?._id === myId ? (
+  <div className="form-actions" style={{ justifyContent: "flex-start" }}>
+    <Link className="button-secondary" to={`/posts/${post._id}/edit`}>
+      Edit post
+    </Link>
+
+    <button
+      className="button-danger"
+      type="button"
+      onClick={handleDelete}
+      disabled={deleting}
+    >
+      {deleting ? "Deleting..." : "Delete post"}
+    </button>
+  </div>
+) : (
+  <button
+    className="button"
+    style={{ marginTop: 28 }}
+    onClick={() => navigate(`/messages?to=${post.owner._id}`)}
+  >
+    Message {post.owner?.name}
+  </button>
+)}
       </article>
     </main>
   );

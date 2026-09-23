@@ -49,3 +49,13 @@ export const updatePost = (id, data, token) =>
   axios.patch(`${API_URL}/posts/${id}`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
+export const deletePost = (id, token) =>
+  axios.delete(`${API_URL}/posts/${id}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const checkAdmin = (token) =>
+  axios.get(`${API_URL}/admin/check`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
