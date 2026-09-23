@@ -6,7 +6,7 @@ const API_URL =
   import.meta.env.VITE_API_URL ||
   (window.location.hostname === "localhost"
     ? "http://localhost:5000/api"
-    : "https://skillshare-backend-1qq5.onrender.com/api");v
+    : "https://skillshare-backend-1qq5.onrender.com/api");
 
 function Register() {
   const [name, setName] = useState("");
