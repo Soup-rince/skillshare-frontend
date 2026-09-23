@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Browse from "./pages/Browse";
@@ -14,13 +14,15 @@ import AdminNavBar from "./components/AdminNavBar";
 function AppContent() {
   const token = localStorage.getItem("token");
   const isAdmin = localStorage.getItem("role") === "admin";
+  const location = useLocation();
+  const isAuthPage = ["/login", "/register"].includes(location.pathname);
 
   return (
     <div className="app-shell">
-      {token && isAdmin ? <AdminNavBar /> : <NavBar />}
+      {!isAuthPage && (token && isAdmin ? <AdminNavBar /> : <NavBar />)}
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={token ? <Navigate to="/browse" replace /> : <Login />} />
+        <Route path="/register" element={token ? <Navigate to="/browse" replace /> : <Register />} />
         <Route path="/browse" element={token ? <Browse /> : <Navigate to="/login" />} />
         <Route path="/messages" element={token ? <Messages /> : <Navigate to="/login" />} />
         <Route path="/" element={<Navigate to={token ? "/browse" : "/login"} />} />
