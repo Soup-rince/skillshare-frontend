@@ -28,26 +28,34 @@ function Login() {
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: "50px auto" }}>
-      <h2>Login</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <input
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{ display: "block", width: "100%", marginBottom: 10, padding: 8 }}
-        />
-        <input
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ display: "block", width: "100%", marginBottom: 10, padding: 8 }}
-        />
-        <button type="submit">Login</button>
-      </form>
-      <p>No account yet? <Link to="/register">Register</Link></p>
+    <div className="auth-page">
+      <section className="auth-brand-panel">
+        <div className="auth-brand-content">
+          <div className="brand"><span className="brand-mark">S</span>SkillShare</div>
+          <h1 className="auth-title">Learn together.<br />Grow together.</h1>
+          <p className="auth-copy">Find people to exchange skills, share what you know, and build meaningful connections.</p>
+        </div>
+      </section>
+      <main className="auth-form-panel">
+        <div className="auth-card">
+          <p className="eyebrow">Welcome back</p>
+          <h1>Log in to SkillShare</h1>
+          <p>Enter your details to continue your learning journey.</p>
+          <form className="form-stack" onSubmit={handleSubmit}>
+            {error && <p className="alert">{error}</p>}
+            <div className="field">
+              <label htmlFor="login-email">Email address</label>
+              <input id="login-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div className="field">
+              <label htmlFor="login-password">Password</label>
+              <input id="login-password" type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+            <button className="button" type="submit">Log in</button>
+          </form>
+          <p className="form-note">New to SkillShare? <Link to="/register">Create an account</Link></p>
+        </div>
+      </main>
     </div>
   );
 }

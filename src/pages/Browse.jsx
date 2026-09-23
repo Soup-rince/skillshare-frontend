@@ -7,6 +7,7 @@ function Browse() {
   const [keyword, setKeyword] = useState("");
   const [category, setCategory] = useState("");
   const [postType, setPostType] = useState("");
+  const [error, setError] = useState("");
 
   const fetchPosts = async () => {
     const params = {};
@@ -14,12 +15,18 @@ function Browse() {
     if (category) params.category = category;
     if (postType) params.postType = postType;
 
-    const res = await getSkillPosts(params);
-    setPosts(res.data);
+    try {
+      setError("");
+      const res = await getSkillPosts(params);
+      setPosts(res.data);
+    } catch {
+      setError("We could not load skill posts. Please try again.");
+    }
   };
 
   useEffect(() => {
-    fetchPosts();
+    const initialLoad = window.setTimeout(fetchPosts, 0);
+    return () => window.clearTimeout(initialLoad);
   }, []);
 
   const handleSearch = (e) => {
@@ -28,45 +35,42 @@ function Browse() {
   };
 
   return (
-    <div style={{ maxWidth: 700, margin: "30px auto" }}>
-      <h2>Browse Skill Posts</h2>
+    <main className="page-container">
+      <header className="page-heading">
+        <div>
+          <p className="eyebrow">Community skills</p>
+          <h1>Explore skill exchanges</h1>
+          <p>Discover what people can teach and what they want to learn.</p>
+        </div>
+        <Link className="button" to="/create-post">+ Share a skill</Link>
+      </header>
 
-      <form onSubmit={handleSearch} style={{ marginBottom: 20, display: "flex", gap: 8 }}>
-        <input
-          placeholder="Search keyword..."
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          style={{ flex: 1, padding: 8 }}
-        />
-        <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ padding: 8 }}>
-          <option value="">All Categories</option>
-          <option value="music">Music</option>
-          <option value="programming">Programming</option>
-          <option value="language">Language</option>
-          <option value="art">Art</option>
+      <form className="toolbar" onSubmit={handleSearch}>
+        <input aria-label="Search skill posts" placeholder="Search a skill, topic, or keyword" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+        <select aria-label="Filter by category" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <option value="">All categories</option><option value="music">Music</option><option value="programming">Programming</option><option value="language">Language</option><option value="art">Art</option>
         </select>
-        <select value={postType} onChange={(e) => setPostType(e.target.value)} style={{ padding: 8 }}>
-          <option value="">All Types</option>
-          <option value="offer">Offer</option>
-          <option value="request">Request</option>
+        <select aria-label="Filter by post type" value={postType} onChange={(e) => setPostType(e.target.value)}>
+          <option value="">Offers and requests</option><option value="offer">Offers</option><option value="request">Requests</option>
         </select>
-        <button type="submit">Search</button>
+        <button className="button" type="submit">Search</button>
       </form>
 
-      {posts.length === 0 && <p>No posts found.</p>}
+      {error && <p className="alert" style={{ marginTop: 18 }}>{error}</p>}
+      {!error && posts.length === 0 && <div className="empty-state"><h2>No skill posts found</h2><p>Try changing your filters or be the first to share a skill.</p></div>}
 
-      {posts.map((post) => (
-        <div key={post._id} style={{ border: "1px solid #ddd", borderRadius: 8, padding: 15, marginBottom: 10 }}>
-          <h3>{post.title}</h3>
-          <p>{post.description}</p>
-          <small>
-            {post.category} · {post.proficiencyLevel} · {post.postType} · by {post.owner?.name}
-          </small>
-          <br />
-          <Link to={`/posts/${post._id}`}>View Details</Link>
-        </div>
-      ))}
-    </div>
+      <section className="post-grid" aria-label="Skill posts">
+        {posts.map((post) => (
+          <article className="post-card" key={post._id}>
+            <span className={`tag ${post.postType === "offer" ? "tag-offer" : "tag-request"}`}>{post.postType}</span>
+            <h2>{post.title}</h2>
+            <p className="post-description">{post.description}</p>
+            <p className="post-meta">{post.category} · {post.proficiencyLevel} · by {post.owner?.name || "SkillShare member"}</p>
+            <Link className="post-card-link" to={`/posts/${post._id}`}>View details →</Link>
+          </article>
+        ))}
+      </section>
+    </main>
   );
 }
 

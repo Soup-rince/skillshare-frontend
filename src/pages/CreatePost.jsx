@@ -3,11 +3,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { createPost, updatePost, getPostById } from "../api";
 
 function CreatePost() {
-  const { id } = useParams(); // may laman lang kung "edit mode"
+  const { id } = useParams();
   const isEditMode = Boolean(id);
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
-
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("music");
@@ -16,101 +15,47 @@ function CreatePost() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isEditMode) {
-      const loadPost = async () => {
+    if (!isEditMode) return;
+    const loadPost = async () => {
+      try {
         const res = await getPostById(id);
-        setTitle(res.data.title);
-        setDescription(res.data.description);
-        setCategory(res.data.category);
-        setProficiencyLevel(res.data.proficiencyLevel);
-        setPostType(res.data.postType);
-      };
-      loadPost();
-    }
-  }, [id]);
+        setTitle(res.data.title); setDescription(res.data.description); setCategory(res.data.category);
+        setProficiencyLevel(res.data.proficiencyLevel); setPostType(res.data.postType);
+      } catch { setError("We could not load this post."); }
+    };
+    loadPost();
+  }, [id, isEditMode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (!title.trim() || !description.trim()) {
-      setError("Title and description cannot be empty.");
-      return;
-    }
-
+    if (!title.trim() || !description.trim()) { setError("Title and description cannot be empty."); return; }
     const payload = { title, description, category, proficiencyLevel, postType };
-
     try {
-      if (isEditMode) {
-        await updatePost(id, payload, token);
-        navigate(`/posts/${id}`);
-      } else {
-        const res = await createPost(payload, token);
-        navigate(`/posts/${res.data._id}`);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Something went wrong");
-    }
+      if (isEditMode) { await updatePost(id, payload, token); navigate(`/posts/${id}`); }
+      else { const res = await createPost(payload, token); navigate(`/posts/${res.data._id}`); }
+    } catch (err) { setError(err.response?.data?.message || "Something went wrong. Please try again."); }
   };
 
   return (
-    <div style={{ maxWidth: 480, margin: "30px auto" }}>
-      <h2>{isEditMode ? "Edit Post" : "Create a Skill Post"}</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      <form onSubmit={handleSubmit}>
-        <label style={{ display: "block", fontSize: 13, marginBottom: 4 }}>Title</label>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          style={{ display: "block", width: "100%", padding: 8, marginBottom: 12 }}
-        />
-
-        <label style={{ display: "block", fontSize: 13, marginBottom: 4 }}>Description</label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          style={{ display: "block", width: "100%", padding: 8, marginBottom: 12, minHeight: 80 }}
-        />
-
-        <label style={{ display: "block", fontSize: 13, marginBottom: 4 }}>Category</label>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          style={{ display: "block", width: "100%", padding: 8, marginBottom: 12 }}
-        >
-          <option value="music">Music</option>
-          <option value="programming">Programming</option>
-          <option value="language">Language</option>
-          <option value="art">Art</option>
-        </select>
-
-        <label style={{ display: "block", fontSize: 13, marginBottom: 4 }}>Proficiency Level</label>
-        <select
-          value={proficiencyLevel}
-          onChange={(e) => setProficiencyLevel(e.target.value)}
-          style={{ display: "block", width: "100%", padding: 8, marginBottom: 12 }}
-        >
-          <option value="beginner">Beginner</option>
-          <option value="intermediate">Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-
-        <label style={{ display: "block", fontSize: 13, marginBottom: 4 }}>Post Type</label>
-        <select
-          value={postType}
-          onChange={(e) => setPostType(e.target.value)}
-          style={{ display: "block", width: "100%", padding: 8, marginBottom: 16 }}
-        >
-          <option value="offer">Offer — I can teach this</option>
-          <option value="request">Request — I want to learn this</option>
-        </select>
-
-        <button type="submit" style={{ width: "100%", padding: 10 }}>
-          {isEditMode ? "Save Changes" : "Create Post"}
-        </button>
-      </form>
-    </div>
+    <main className="page-container">
+      <header className="page-heading">
+        <div><p className="eyebrow">Skill exchange</p><h1>{isEditMode ? "Edit your skill post" : "Share a skill"}</h1><p>{isEditMode ? "Keep your post clear and up to date." : "Tell the community what you can teach or want to learn."}</p></div>
+      </header>
+      <section className="content-card post-form">
+        <form className="form-stack" onSubmit={handleSubmit}>
+          {error && <p className="alert">{error}</p>}
+          <div className="field"><label htmlFor="post-title">Post title</label><input id="post-title" placeholder="e.g., I can teach beginner guitar" value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+          <div className="field"><label htmlFor="post-description">Description</label><textarea id="post-description" placeholder="Describe the skill, your experience, and what you are looking for." value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+          <div className="form-grid">
+            <div className="field"><label htmlFor="post-category">Category</label><select id="post-category" value={category} onChange={(e) => setCategory(e.target.value)}><option value="music">Music</option><option value="programming">Programming</option><option value="language">Language</option><option value="art">Art</option></select></div>
+            <div className="field"><label htmlFor="post-level">Proficiency level</label><select id="post-level" value={proficiencyLevel} onChange={(e) => setProficiencyLevel(e.target.value)}><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></div>
+          </div>
+          <div className="field"><label htmlFor="post-type">I want to...</label><select id="post-type" value={postType} onChange={(e) => setPostType(e.target.value)}><option value="offer">Offer — I can teach this</option><option value="request">Request — I want to learn this</option></select></div>
+          <div className="form-actions"><button className="button-secondary" type="button" onClick={() => navigate(-1)}>Cancel</button><button className="button" type="submit">{isEditMode ? "Save changes" : "Publish post"}</button></div>
+        </form>
+      </section>
+    </main>
   );
 }
 

@@ -4,65 +4,42 @@ import { getDashboard } from "../api";
 
 function Dashboard() {
   const [data, setData] = useState(null);
+  const [error, setError] = useState("");
   const token = localStorage.getItem("token");
 
   useEffect(() => {
     const fetchDashboard = async () => {
-      const res = await getDashboard(token);
-      setData(res.data);
+      try { const res = await getDashboard(token); setData(res.data); }
+      catch { setError("We could not load your dashboard."); }
     };
     fetchDashboard();
-  }, []);
+  }, [token]);
 
-  if (!data) return <p style={{ textAlign: "center", marginTop: 40 }}>Loading...</p>;
+  if (error) return <main className="page-container"><p className="alert">{error}</p></main>;
+  if (!data) return <main className="page-container"><div className="empty-state"><p>Loading your dashboard...</p></div></main>;
 
   return (
-    <div style={{ maxWidth: 700, margin: "30px auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-  <     h2>Your Dashboard</h2>
-        {data.unreadMessages > 0 && (
-        <span style={{ background: "#e6f1fb", color: "#185fa5", padding: "4px 12px", borderRadius: 20, fontSize: 13, fontWeight: 600 }}>
-          {data.unreadMessages} unread message{data.unreadMessages > 1 ? "s" : ""}
-        </span>
-  )}
-</div>
+    <main className="page-container">
+      <header className="page-heading">
+        <div><p className="eyebrow">Your space</p><h1>Dashboard</h1><p>Keep track of your skill posts and conversations.</p></div>
+        <Link className="button" to="/create-post">+ New post</Link>
+      </header>
+      <section className="dashboard-stats">
+        <div className="stat-card"><span className="stat-label">Your posts</span><strong className="stat-value">{data.totalPosts}</strong></div>
+        <div className="stat-card"><span className="stat-label">Unread messages</span><strong className="stat-value">{data.unreadMessages}</strong></div>
+        <div className="stat-card"><span className="stat-label">Recent activity</span><strong className="stat-value">{data.recentMessages.length}</strong></div>
+      </section>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 30 }}>
-        <div style={{ background: "#f6f5f2", borderRadius: 10, padding: "14px 16px" }}>
-          <div style={{ fontSize: 12, color: "#666" }}>Your Posts</div>
-          <div style={{ fontSize: 22, fontWeight: 600 }}>{data.totalPosts}</div>
-        </div>
-        <div style={{ background: "#f6f5f2", borderRadius: 10, padding: "14px 16px" }}>
-          <div style={{ fontSize: 12, color: "#666" }}>Unread Messages</div>
-          <div style={{ fontSize: 22, fontWeight: 600 }}>{data.unreadMessages}</div>
-        </div>
-      </div>
+      <h2 className="section-title">Your skill posts</h2>
+      {data.myPosts.length === 0 ? <div className="empty-state"><h2>You have not shared a skill yet</h2><p>Create your first post to start connecting with the community.</p></div> : <div className="list-card">
+        {data.myPosts.map((post) => <div className="list-item" key={post._id}><div><strong>{post.title}</strong><small>{post.postType} · {post.category} · {post.proficiencyLevel}</small></div><div className="list-actions"><Link to={`/posts/${post._id}`}>View</Link><Link to={`/posts/${post._id}/edit`}>Edit</Link></div></div>)}
+      </div>}
 
-      <h3>Your Posts</h3>
-      {data.myPosts.length === 0 && <p style={{ color: "#888" }}>No posts yet.</p>}
-      {data.myPosts.map((post) => (
-        <div key={post._id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eee" }}>
-          <div>
-            <strong>{post.title}</strong>
-            <div style={{ fontSize: 12, color: "#666" }}>{post.postType} · {post.category}</div>
-          </div>
-          <div>
-            <Link to={`/posts/${post._id}`}>View</Link>{" · "}
-            <Link to={`/posts/${post._id}/edit`}>Edit</Link>
-        </div>
-        </div>
-      ))}
-
-      <h3 style={{ marginTop: 30 }}>Recent Messages</h3>
-      {data.recentMessages.length === 0 && <p style={{ color: "#888" }}>No messages yet.</p>}
-      {data.recentMessages.map((msg) => (
-        <Link key={msg._id} to={`/messages?to=${msg.partnerId}`} style={{ textDecoration: "none", color: "inherit" }}>
-          <div style={{ padding: "8px 0", borderBottom: "1px solid #eee", fontSize: 13 }}>
-            <strong>{msg.isMine ? `You → ${msg.partnerName}` : msg.partnerName}:</strong> {msg.content}
-          </div>
-      </Link>
-    ))}
-    </div>
+      <h2 className="section-title">Recent messages</h2>
+      {data.recentMessages.length === 0 ? <div className="empty-state"><p>No messages yet. Browse skill posts to start a conversation.</p></div> : <div className="list-card">
+        {data.recentMessages.map((msg) => <Link className="list-item" key={msg._id} to={`/messages?to=${msg.partnerId}`}><div><strong>{msg.isMine ? `You → ${msg.partnerName}` : msg.partnerName}</strong><small>{msg.content}</small></div><span className="post-card-link">Open →</span></Link>)}
+      </div>}
+    </main>
   );
 }
 

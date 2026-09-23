@@ -29,32 +29,38 @@ function Register() {
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: "50px auto" }}>
-      <h2>Register</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <input
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ display: "block", width: "100%", marginBottom: 10, padding: 8 }}
-        />
-        <input
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{ display: "block", width: "100%", marginBottom: 10, padding: 8 }}
-        />
-        <input
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ display: "block", width: "100%", marginBottom: 10, padding: 8 }}
-        />
-        <button type="submit">Register</button>
-      </form>
-      <p>Already have an account? <Link to="/login">Login</Link></p>
+    <div className="auth-page">
+      <section className="auth-brand-panel">
+        <div className="auth-brand-content">
+          <div className="brand"><span className="brand-mark">S</span>SkillShare</div>
+          <h1 className="auth-title">Share a skill.<br />Find your next one.</h1>
+          <p className="auth-copy">Join a community where skills are exchanged through conversation and collaboration.</p>
+        </div>
+      </section>
+      <main className="auth-form-panel">
+        <div className="auth-card">
+          <p className="eyebrow">Join the community</p>
+          <h1>Create your account</h1>
+          <p>It only takes a moment to start sharing and learning.</p>
+          <form className="form-stack" onSubmit={handleSubmit}>
+            {error && <p className="alert">{error}</p>}
+            <div className="field">
+              <label htmlFor="register-name">Name</label>
+              <input id="register-name" placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} required />
+            </div>
+            <div className="field">
+              <label htmlFor="register-email">Email address</label>
+              <input id="register-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div className="field">
+              <label htmlFor="register-password">Password</label>
+              <input id="register-password" type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+            <button className="button" type="submit">Create account</button>
+          </form>
+          <p className="form-note">Already have an account? <Link to="/login">Log in</Link></p>
+        </div>
+      </main>
     </div>
   );
 }

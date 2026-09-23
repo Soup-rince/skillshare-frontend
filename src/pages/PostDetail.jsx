@@ -11,54 +11,25 @@ function PostDetail() {
 
   useEffect(() => {
     const fetchPost = async () => {
-      try {
-        const res = await getPostById(id);
-        setPost(res.data);
-      } catch (err) {
-        setError("Post not found");
-      }
+      try { const res = await getPostById(id); setPost(res.data); }
+      catch { setError("Post not found."); }
     };
     fetchPost();
   }, [id]);
 
-  const handleMessage = () => {
-    navigate(`/messages?to=${post.owner._id}`);
-  };
-
-  if (error) return <p style={{ textAlign: "center", marginTop: 40 }}>{error}</p>;
-  if (!post) return <p style={{ textAlign: "center", marginTop: 40 }}>Loading...</p>;
+  if (error) return <main className="page-container"><div className="empty-state"><h2>{error}</h2><Link className="button-secondary" to="/browse">Back to Browse</Link></div></main>;
+  if (!post) return <main className="page-container"><div className="empty-state"><p>Loading skill post...</p></div></main>;
 
   return (
-    <div style={{ maxWidth: 520, margin: "30px auto" }}>
-      <p style={{ fontSize: 13, color: "#666" }}>
-        Posted by{" "}
-        <Link to={`/profile/${post.owner?._id}`} style={{ fontWeight: "bold", color: "#0f6e56" }}>
-          {post.owner?.name}
-        </Link>{" "}
-        · {new Date(post.createdAt).toLocaleDateString()}
-      </p>
-
-      <div style={{ margin: "10px 0" }}>
-        <span style={{ background: post.postType === "offer" ? "#eaf3de" : "#e6f1fb", padding: "3px 10px", borderRadius: 20, fontSize: 12, marginRight: 6 }}>
-          {post.postType === "offer" ? "Offer" : "Request"}
-        </span>
-        <span style={{ background: "#f1efe8", padding: "3px 10px", borderRadius: 20, fontSize: 12, marginRight: 6 }}>
-          {post.category}
-        </span>
-        <span style={{ background: "#f1efe8", padding: "3px 10px", borderRadius: 20, fontSize: 12 }}>
-          {post.proficiencyLevel}
-        </span>
-      </div>
-
-      <h2>{post.title}</h2>
-      <p style={{ color: "#444", lineHeight: 1.6 }}>{post.description}</p>
-
-      {post.owner?._id !== myId && (
-        <button onClick={handleMessage} style={{ width: "100%", padding: 12, marginTop: 20 }}>
-         Message {post.owner?.name}
-        </button>
-)}
-    </div>
+    <main className="page-container detail-layout">
+      <article className="content-card">
+        <div className="detail-meta">Posted by <Link to={`/profile/${post.owner?._id}`}>{post.owner?.name || "SkillShare member"}</Link><span>·</span><span>{new Date(post.createdAt).toLocaleDateString()}</span></div>
+        <div className="tag-row"><span className={`tag ${post.postType === "offer" ? "tag-offer" : "tag-request"}`}>{post.postType}</span><span className="tag tag-neutral">{post.category}</span><span className="tag tag-neutral">{post.proficiencyLevel}</span></div>
+        <h1 className="detail-title">{post.title}</h1>
+        <p className="detail-copy">{post.description}</p>
+        {post.owner?._id !== myId && <button className="button" style={{ marginTop: 28 }} onClick={() => navigate(`/messages?to=${post.owner._id}`)}>Message {post.owner?.name}</button>}
+      </article>
+    </main>
   );
 }
 

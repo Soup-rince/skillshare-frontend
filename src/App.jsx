@@ -14,6 +14,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <div className="app-shell">
       <NavBar />
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -27,6 +28,7 @@ function App() {
         <Route path="/create-post" element={token ? <CreatePost /> : <Navigate to="/login" />} />
         <Route path="/posts/:id/edit" element={token ? <CreatePost /> : <Navigate to="/login" />} />
       </Routes>
+      </div>
     </BrowserRouter>
   );
 }

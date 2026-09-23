@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 
 function NavBar() {
   const navigate = useNavigate();
@@ -13,19 +13,18 @@ function NavBar() {
   if (!token) return null; // walang navbar kung hindi naka-login
 
   return (
-    <nav style={{
-      display: "flex",
-      gap: 16,
-      padding: "12px 20px",
-      background: "#333",
-      alignItems: "center"
-    }}>
-      <Link to="/browse" style={{ color: "white" }}>Browse</Link>
-      <Link to="/dashboard" style={{ color: "white" }}>Dashboard</Link>
-      <Link to="/messages" style={{ color: "white" }}>Messages</Link>
-      <Link to={`/profile/${localStorage.getItem("userId")}`} style={{ color: "white" }}>Profile</Link>
-      <button onClick={handleLogout} style={{ marginLeft: "auto" }}>Logout</button>
-      <Link to="/create-post" style={{ color: "white" }}>+ New Post</Link>
+    <nav className="site-nav">
+      <Link className="brand" to="/browse"><span className="brand-mark">S</span>SkillShare</Link>
+      <div className="nav-links">
+        <NavLink className="nav-link" to="/browse">Browse</NavLink>
+        <NavLink className="nav-link" to="/dashboard">Dashboard</NavLink>
+        <NavLink className="nav-link" to="/messages">Messages</NavLink>
+        <NavLink className="nav-link" to={`/profile/${localStorage.getItem("userId")}`}>Profile</NavLink>
+      </div>
+      <div className="nav-actions">
+        <button className="button-ghost button-small" onClick={handleLogout}>Log out</button>
+        <Link className="button button-small" to="/create-post">+ New post</Link>
+      </div>
     </nav>
   );
 }
