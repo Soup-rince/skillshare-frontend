@@ -2,7 +2,11 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api";
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (window.location.hostname === "localhost"
+    ? "http://localhost:5000/api"
+    : "https://skillshare-backend-1qq5.onrender.com/api");
 
 function Login() {
   const [email, setEmail] = useState("");
