@@ -12,18 +12,34 @@ function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (name.trim().length < 2) {
+      setError("Name must be at least 2 characters long");
+      return;
+    }
+
+    const nameRegex = /^[a-zA-Z\s.'-]+$/;
+    if (!nameRegex.test(name.trim())) {
+      setError("Name can only contain letters, spaces, and basic punctuation");
+      return;
+    }
+
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    if (!strongPasswordRegex.test(password)) {
+      setError("Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character");
+      return;
+    }
+
     try {
-      const res = await axios.post(`${API_URL}/auth/register`, { name, email, password });
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("userId", res.data._id);
-      localStorage.setItem("role", res.data.role);
-      navigate("/browse");
+      await axios.post(`${API_URL}/auth/register`, { name, email, password });
+      navigate("/login", { state: { message: "Registration successful! Please log in." } });
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     }
@@ -55,7 +71,35 @@ function Register() {
             </div>
             <div className="field">
               <label htmlFor="register-password">Password</label>
-              <input id="register-password" type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <div style={{ position: "relative" }}>
+                <input
+                  id="register-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ width: "100%", paddingRight: 60 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: 12,
+                    padding: "4px 8px",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#0f6e56"
+                  }}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
             <button className="button" type="submit">Create account</button>
           </form>

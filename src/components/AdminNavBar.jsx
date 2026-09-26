@@ -31,7 +31,6 @@ function AdminNavBar() {
       </div>
 
       <div className="admin-nav-actions">
-        <Link className="admin-new-post" to="/create-post">+ New post</Link>
         <button className="admin-logout" type="button" onClick={handleLogout}>Log out</button>
       </div>
     </nav>

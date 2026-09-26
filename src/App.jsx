@@ -5,11 +5,13 @@ import Browse from "./pages/Browse";
 import NavBar from "./components/NavBar";
 import PostDetail from "./pages/PostDetail";
 import Profile from "./pages/Profile";
+import EditProfile from "./pages/EditProfile";
 import Dashboard from "./pages/Dashboard";
 import Messages from "./pages/Messages";
 import CreatePost from "./pages/CreatePost";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminNavBar from "./components/AdminNavBar";
+import { ConfirmProvider } from "./contexts/ConfirmContext";
 
 function AppContent() {
   const token = localStorage.getItem("token");
@@ -27,6 +29,7 @@ function AppContent() {
         <Route path="/messages" element={token ? <Messages /> : <Navigate to="/login" />} />
         <Route path="/" element={<Navigate to={token ? "/browse" : "/login"} />} />
         <Route path="/posts/:id" element={token ? <PostDetail /> : <Navigate to="/login" />} />
+        <Route path="/profile/edit" element={token ? <EditProfile /> : <Navigate to="/login" />} />
         <Route path="/profile/:id" element={token ? <Profile /> : <Navigate to="/login" />} />
         <Route path="/dashboard" element={token ? <Dashboard /> : <Navigate to="/login" />} />
         <Route path="/admin" element={token ? <AdminDashboard /> : <Navigate to="/login" />} />
@@ -40,7 +43,9 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <ConfirmProvider>
+        <AppContent />
+      </ConfirmProvider>
     </BrowserRouter>
   );
 }

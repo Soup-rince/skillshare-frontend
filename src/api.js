@@ -59,3 +59,8 @@ export const checkAdmin = (token) =>
   axios.get(`${API_URL}/admin/check`, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
+export const updateProfile = (data, token) =>
+  axios.patch(`${API_URL}/users/me/update`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
