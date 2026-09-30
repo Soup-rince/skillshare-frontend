@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FaSearch, FaPaperPlane } from "react-icons/fa";
-import { getInbox, getConversation, sendMessage, getUserProfile } from "../api";
+import { FaSearch, FaPaperPlane, FaImage, FaVideo, FaMicrophone, FaPaperclip, FaTimes, FaStop, FaDownload } from "react-icons/fa";
+import { getInbox, getConversation, sendMessage, getUserProfile, uploadMedia } from "../api";
 
 function getInitials(name) {
   if (!name) return "?";
@@ -75,6 +75,13 @@ function groupMessagesByDate(messages) {
   return groups;
 }
 
+function formatFileSize(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function Messages() {
   const [searchParams] = useSearchParams();
   const preselectedId = searchParams.get("to");
@@ -84,9 +91,23 @@ function Messages() {
   const [content, setContent] = useState("");
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [pendingFile, setPendingFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [lightboxName, setLightboxName] = useState("");
+  const [lightboxType, setLightboxType] = useState("image");
   const token = localStorage.getItem("token");
   const myId = localStorage.getItem("userId");
   const streamRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const videoInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
 
   const loadInbox = async () => {
     const res = await getInbox(token);
@@ -97,6 +118,11 @@ function Messages() {
     setActivePartner({ id: partnerId, name: partnerName });
     const res = await getConversation(partnerId, token);
     setMessages(res.data);
+  };
+
+  const closeLightbox = () => {
+    setLightboxUrl(null);
+    setLightboxType("image");
   };
 
   useEffect(() => {
@@ -122,16 +148,124 @@ function Messages() {
     }
   }, [messages]);
 
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        setLightboxUrl(null);
+        setLightboxType("image");
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
+
+  const handleFileSelect = (e, type) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPendingFile({ file, previewType: type });
+    setShowAttachMenu(false);
+    e.target.value = "";
+  };
+
+  const handleRemovePending = () => {
+    setPendingFile(null);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const file = new File([blob], `voice-${Date.now()}.webm`, { type: "audio/webm" });
+        setPendingFile({ file, previewType: "audio" });
+        stream.getTracks().forEach((t) => t.stop());
+      };
+
+      mediaRecorder.start();
+      setRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch {
+      setError("Microphone access was denied.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && recording) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && recording) {
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
+      setRecording(false);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      setRecordingTime(0);
+    }
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!content.trim() || !activePartner) return;
+    if (!activePartner) return;
+    if (!content.trim() && !pendingFile) return;
+
     try {
-      await sendMessage({ receiver: activePartner.id, content }, token);
+      setUploading(true);
+      setError("");
+
+      let mediaData = {};
+
+      if (pendingFile) {
+        const formData = new FormData();
+        formData.append("file", pendingFile.file);
+        const uploadRes = await uploadMedia(formData, token);
+        mediaData = uploadRes.data;
+      }
+
+      await sendMessage(
+        {
+          receiver: activePartner.id,
+          content: content.trim() || "",
+          ...mediaData,
+        },
+        token
+      );
+
       setContent("");
+      setPendingFile(null);
       await openConversation(activePartner.id, activePartner.name);
       await loadInbox();
-    } catch {
+    } catch (err) {
       setError("Message could not be sent. Please try again.");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -145,6 +279,8 @@ function Messages() {
   }, [inbox, searchQuery]);
 
   const messageGroups = useMemo(() => groupMessagesByDate(messages), [messages]);
+
+  const canSend = (content.trim() || pendingFile) && !uploading && !recording;
 
   return (
     <main className="page-container">
@@ -246,7 +382,47 @@ function Messages() {
                             </span>
                           )}
                           <div className={`message-bubble ${mine ? "mine" : "theirs"}`}>
-                            <span className="message-bubble-content">{msg.content}</span>
+                            {msg.mediaUrl && msg.mediaType === "image" && (
+                              <img
+                                src={msg.mediaUrl}
+                                alt={msg.mediaName || "image"}
+                                className="message-media-image"
+                                onClick={() => {
+                                  setLightboxUrl(msg.mediaUrl);
+                                  setLightboxName(msg.mediaName);
+                                  setLightboxType("image");
+                                }}
+                              />
+                            )}
+                            {msg.mediaUrl && msg.mediaType === "video" && (
+                              <video
+                                src={msg.mediaUrl}
+                                className="message-media-video"
+                                onClick={() => {
+                                  setLightboxUrl(msg.mediaUrl);
+                                  setLightboxName(msg.mediaName);
+                                  setLightboxType("video");
+                                }}
+                              />
+                            )}
+                            {msg.mediaUrl && msg.mediaType === "audio" && (
+                              <audio src={msg.mediaUrl} controls className="message-media-audio" />
+                            )}
+                            {msg.mediaUrl && msg.mediaType === "file" && (
+                              <a
+                                href={`${msg.mediaUrl.replace("/upload/", "/upload/fl_attachment/")}?filename=${encodeURIComponent(msg.mediaName || "file")}`}
+                                className="message-media-file"
+                              >
+                                <FaPaperclip aria-hidden="true" />
+                                <span className="message-media-file-name">{msg.mediaName || "File"}</span>
+                                {msg.mediaSize > 0 && (
+                                  <span className="message-media-file-size">{formatFileSize(msg.mediaSize)}</span>
+                                )}
+                              </a>
+                            )}
+                            {msg.content && (
+                              <span className="message-bubble-content">{msg.content}</span>
+                            )}
                             <span className="message-bubble-time">{formatTime(msg.createdAt)}</span>
                           </div>
                         </div>
@@ -256,21 +432,143 @@ function Messages() {
                 ))}
               </div>
               <form className="message-compose" onSubmit={handleSend}>
+                {pendingFile && (
+                  <div className="pending-file-preview">
+                    {pendingFile.previewType === "image" && (
+                      <img src={URL.createObjectURL(pendingFile.file)} alt="preview" />
+                    )}
+                    {pendingFile.previewType === "video" && (
+                      <video src={URL.createObjectURL(pendingFile.file)} />
+                    )}
+                    {pendingFile.previewType === "audio" && (
+                      <audio src={URL.createObjectURL(pendingFile.file)} controls />
+                    )}
+                    {pendingFile.previewType === "file" && (
+                      <div className="pending-file-icon">
+                        <FaPaperclip aria-hidden="true" />
+                        <span>{pendingFile.file.name}</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      className="pending-file-remove"
+                      onClick={handleRemovePending}
+                      aria-label="Remove attachment"
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+                )}
+
+                {recording ? (
+                  <div className="recording-bar">
+                    <span className="recording-dot" aria-hidden="true" />
+                    <span className="recording-time">
+                      {String(Math.floor(recordingTime / 60)).padStart(2, "0")}:
+                      {String(recordingTime % 60).padStart(2, "0")}
+                    </span>
+                    <button type="button" className="recording-cancel" onClick={cancelRecording}>
+                      Cancel
+                    </button>
+                    <button type="button" className="recording-stop" onClick={stopRecording}>
+                      <FaStop aria-hidden="true" />
+                      <span>Stop</span>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="attach-wrapper">
+                      <button
+                        type="button"
+                        className="attach-button"
+                        onClick={() => setShowAttachMenu((s) => !s)}
+                        aria-label="Attach media"
+                      >
+                        <FaPaperclip />
+                      </button>
+                      {showAttachMenu && (
+                        <div className="attach-menu">
+                          <button type="button" onClick={() => imageInputRef.current?.click()}>
+                            <FaImage /> <span>Photo</span>
+                          </button>
+                          <button type="button" onClick={() => videoInputRef.current?.click()}>
+                            <FaVideo /> <span>Video</span>
+                          </button>
+                          <button type="button" onClick={startRecording}>
+                            <FaMicrophone /> <span>Voice</span>
+                          </button>
+                          <button type="button" onClick={() => fileInputRef.current?.click()}>
+                            <FaPaperclip /> <span>File</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="Write a message..."
+                      aria-label="Message"
+                      disabled={uploading}
+                    />
+                    <button className="button" type="submit" disabled={!canSend}>
+                      <FaPaperPlane aria-hidden="true" />
+                      <span>{uploading ? "Sending..." : "Send"}</span>
+                    </button>
+                  </>
+                )}
+
                 <input
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Write a message..."
-                  aria-label="Message"
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => handleFileSelect(e, "image")}
                 />
-                <button className="button" type="submit" disabled={!content.trim()}>
-                  <FaPaperPlane aria-hidden="true" />
-                  <span>Send</span>
-                </button>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  hidden
+                  onChange={(e) => handleFileSelect(e, "video")}
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  hidden
+                  onChange={(e) => handleFileSelect(e, "file")}
+                />
               </form>
             </>
           )}
         </section>
       </section>
+
+      {lightboxUrl && (
+        <div className="lightbox-overlay" onClick={closeLightbox}>
+          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="lightbox-close"
+              onClick={closeLightbox}
+              aria-label="Close"
+            >
+              <FaTimes />
+            </button>
+            {lightboxType === "video" ? (
+              <video src={lightboxUrl} controls autoPlay className="lightbox-video" />
+            ) : (
+              <img src={lightboxUrl} alt={lightboxName || "image"} className="lightbox-image" />
+            )}
+            <a
+              className="lightbox-download"
+              href={`${lightboxUrl.replace("/upload/", "/upload/fl_attachment/")}?filename=${encodeURIComponent(lightboxName || (lightboxType === "video" ? "video" : "image"))}`}
+            >
+              <FaDownload aria-hidden="true" />
+              <span>Download</span>
+            </a>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

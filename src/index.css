@@ -1079,3 +1079,333 @@ a.post-card:hover .post-card-link {
   color: inherit !important;
   line-height: 1 !important;
 }
+
+.message-media-image {
+  display: block;
+  max-width: 280px;
+  max-height: 280px;
+  border-radius: 10px;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.message-media-video {
+  display: block;
+  max-width: 300px;
+  border-radius: 10px;
+}
+
+.message-media-audio {
+  display: block;
+  width: 240px;
+  margin: 4px 0;
+}
+
+.message-media-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.15);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.message-bubble.theirs .message-media-file {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.message-media-file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-media-file-size {
+  font-size: 0.72rem;
+  opacity: 0.75;
+  flex: 0 0 auto;
+}
+
+.message-compose {
+  position: relative;
+  align-items: center;
+}
+
+.attach-wrapper {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.attach-button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid #dce1ed;
+  border-radius: 50%;
+  color: #66708a;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s, background 0.18s;
+}
+
+.attach-button:hover {
+  border-color: #2639ba;
+  color: #2639ba;
+  background: #f6f7ff;
+}
+
+.attach-menu {
+  position: absolute;
+  bottom: 48px;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid #e5e9f4;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+  z-index: 20;
+}
+
+.attach-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 8px;
+  color: #253150;
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.attach-menu button:hover {
+  background: #eef0ff;
+  color: #2639ba;
+}
+
+.attach-menu button svg {
+  font-size: 0.95rem;
+}
+
+.pending-file-preview {
+  position: absolute;
+  bottom: 100%;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid #e5e9f4;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.pending-file-preview img {
+  max-width: 80px;
+  max-height: 60px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.pending-file-preview video {
+  max-width: 120px;
+  max-height: 60px;
+  border-radius: 6px;
+}
+
+.pending-file-preview audio {
+  max-width: 200px;
+}
+
+.pending-file-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #2639ba;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.pending-file-icon span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.pending-file-remove {
+  margin-left: auto;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #ad2438;
+  background: #fff2f4;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.pending-file-remove:hover {
+  background: #ffe4e7;
+}
+
+.recording-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  padding: 0 6px;
+}
+
+.recording-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #dc2626;
+  animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.recording-time {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #172247;
+}
+
+.recording-cancel {
+  margin-left: auto;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  color: #66708a;
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recording-cancel:hover {
+  background: #eef0ff;
+  color: #2639ba;
+}
+
+.recording-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recording-stop:hover {
+  background: #b91c1c;
+}
+
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 30px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(6px);
+}
+
+.lightbox-content {
+  position: relative;
+  max-width: min(90vw, 900px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.18s;
+}
+
+.lightbox-close:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.lightbox-image {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.lightbox-video {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  background: #000;
+}
+
+.lightbox-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 9px;
+  color: #fff;
+  background: #2639ba;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.lightbox-download:hover {
+  background: #1e2e9c;
+}
+
+.message-media-video {
+  cursor: pointer;
+  max-width: 300px;
+  border-radius: 10px;
+}

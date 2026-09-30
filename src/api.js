@@ -24,6 +24,14 @@ export const getInbox = (token) =>
      axios.get(`${API_URL}/messages/inbox`, {
         headers: { Authorization: `Bearer ${token}` }
      });
+
+export const uploadMedia = (formData, token) =>
+  axios.post(`${API_URL}/messages/upload`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  });
     
 export const getSkillPosts = (params) =>
   axios.get(`${API_URL}/posts`, { params });
