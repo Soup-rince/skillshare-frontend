@@ -11,9 +11,10 @@ function EditProfile() {
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId");
   const [bio, setBio] = useState("");
-  const [location, setLocation] = useState("");
   const [interestsInput, setInterestsInput] = useState("");
   const [hobbiesInput, setHobbiesInput] = useState("");
+  const [availability, setAvailability] = useState("");
+  const [preferredLearningStyle, setPreferredLearningStyle] = useState("");
   const [initialValues, setInitialValues] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -26,14 +27,16 @@ function EditProfile() {
         const { user } = res.data;
         const loaded = {
           bio: user.bio || "",
-          location: user.location || "",
           interestsInput: (user.interests || []).join(", "),
           hobbiesInput: (user.hobbies || []).join(", "),
+          availability: user.availability || "",
+          preferredLearningStyle: user.preferredLearningStyle || "",
         };
         setBio(loaded.bio);
-        setLocation(loaded.location);
         setInterestsInput(loaded.interestsInput);
         setHobbiesInput(loaded.hobbiesInput);
+        setAvailability(loaded.availability);
+        setPreferredLearningStyle(loaded.preferredLearningStyle);
         setInitialValues(loaded);
       } catch {
         setError("We could not load your profile.");
@@ -44,7 +47,7 @@ function EditProfile() {
     fetchProfile();
   }, [userId, token]);
 
-  const currentValues = { bio, location, interestsInput, hobbiesInput };
+  const currentValues = { bio, interestsInput, hobbiesInput, availability, preferredLearningStyle };
   const isDirty =
     initialValues !== null &&
     JSON.stringify(currentValues) !== JSON.stringify(initialValues);
@@ -83,7 +86,10 @@ function EditProfile() {
     const hobbies = parseList(hobbiesInput);
 
     try {
-      await updateProfile({ bio, location, interests, hobbies }, token);
+      await updateProfile(
+        { bio, interests, hobbies, availability, preferredLearningStyle },
+        token
+      );
       setInitialValues(currentValues);
       setSuccess("Profile updated successfully.");
       setTimeout(() => navigate(`/profile/${userId}`), 900);
@@ -126,16 +132,6 @@ function EditProfile() {
           </div>
 
           <div className="field">
-            <label htmlFor="profile-location">Location</label>
-            <input
-              id="profile-location"
-              placeholder="e.g., Quezon City, Philippines"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
-          </div>
-
-          <div className="field">
             <label htmlFor="profile-interests">Interests</label>
             <input
               id="profile-interests"
@@ -155,6 +151,32 @@ function EditProfile() {
               onChange={(e) => setHobbiesInput(e.target.value)}
             />
             <small className="field-hint">Separate each hobby with a comma.</small>
+          </div>
+
+          <div className="field">
+            <label htmlFor="profile-availability">Availability</label>
+            <input
+              id="profile-availability"
+              placeholder="e.g., Weekends, Weekday evenings, Flexible"
+              value={availability}
+              onChange={(e) => setAvailability(e.target.value)}
+            />
+            <small className="field-hint">When are you usually available for skill exchanges?</small>
+          </div>
+
+          <div className="field">
+            <label htmlFor="profile-learning-style">Preferred learning style</label>
+            <select
+              id="profile-learning-style"
+              value={preferredLearningStyle}
+              onChange={(e) => setPreferredLearningStyle(e.target.value)}
+            >
+              <option value="">Not specified</option>
+              <option value="visual">Visual (diagrams, videos)</option>
+              <option value="auditory">Auditory (listening, discussion)</option>
+              <option value="kinesthetic">Kinesthetic (hands-on practice)</option>
+              <option value="reading">Reading/Writing (notes, articles)</option>
+            </select>
           </div>
 
           <div className="form-actions">

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
+import WelcomeModal from "../components/WelcomeModal";
+import { markWelcomeSeen } from "../api";
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -13,6 +15,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [showWelcome, setShowWelcome] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const successMessage = location.state?.message;
@@ -26,9 +29,24 @@ function Login() {
       localStorage.setItem("userId", res.data._id);
       localStorage.setItem("role", res.data.role);
       localStorage.setItem("userName", res.data.name);
-      navigate("/browse");
+
+      if (res.data.hasSeenWelcome === false) {
+        setShowWelcome(true);
+      } else {
+        navigate("/browse");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
+    }
+  };
+
+  const handleCloseWelcome = async () => {
+    setShowWelcome(false);
+    try {
+      const token = localStorage.getItem("token");
+      await markWelcomeSeen(token);
+    } catch {
+      // silent fail
     }
   };
 
@@ -90,6 +108,8 @@ function Login() {
           <p className="form-note">New to SkillShare? <Link to="/register">Create an account</Link></p>
         </div>
       </main>
+
+      <WelcomeModal isOpen={showWelcome} onClose={handleCloseWelcome} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { FaMapMarkerAlt, FaCalendarAlt, FaEdit, FaEnvelope, FaBullseye, FaPalette } from "react-icons/fa";
+import { FaCalendarAlt, FaEdit, FaEnvelope, FaBullseye, FaPalette, FaClock, FaGraduationCap } from "react-icons/fa";
 import { getUserProfile } from "../api";
 
 function getInitials(name) {
@@ -72,12 +72,6 @@ function Profile() {
           <div className="profile-header-info">
             <h1>{user.name}</h1>
             <div className="profile-meta">
-              {user.location && (
-                <span className="profile-meta-item">
-                  <FaMapMarkerAlt aria-hidden="true" />
-                  <span>{user.location}</span>
-                </span>
-              )}
               {memberSince && (
                 <span className="profile-meta-item">
                   <FaCalendarAlt aria-hidden="true" />
@@ -188,6 +182,30 @@ function Profile() {
               </div>
             ) : (
               <p className="about-empty">No hobbies listed.</p>
+            )}
+          </div>
+
+          <div className="about-section">
+            <h3 className="about-section-title">
+              <FaClock aria-hidden="true" /> Availability
+            </h3>
+            {user.availability ? (
+              <p className="about-bio">{user.availability}</p>
+            ) : (
+              <p className="about-empty">Not specified.</p>
+            )}
+          </div>
+
+          <div className="about-section">
+            <h3 className="about-section-title">
+              <FaGraduationCap aria-hidden="true" /> Preferred learning style
+            </h3>
+            {user.preferredLearningStyle ? (
+              <p className="about-bio" style={{ textTransform: "capitalize" }}>
+                {user.preferredLearningStyle}
+              </p>
+            ) : (
+              <p className="about-empty">Not specified.</p>
             )}
           </div>
 

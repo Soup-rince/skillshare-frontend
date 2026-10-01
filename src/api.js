@@ -72,3 +72,8 @@ export const updateProfile = (data, token) =>
   axios.patch(`${API_URL}/users/me/update`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
+export const markWelcomeSeen = (token) =>
+  axios.patch(`${API_URL}/users/me/welcome-seen`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
