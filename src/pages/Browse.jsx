@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getSkillPosts } from "../api";
+import { CATEGORIES } from "../constants/categories";
 
 
 function getInitials(name) {
@@ -48,7 +49,6 @@ function Browse() {
     if (category) params.category = category;
     if (postType) params.postType = postType;
 
-    // May filter ba? Kung oo, latest-first. Kung wala, random.
     const hasFilter = Boolean(keyword || category || postType);
 
     try {
@@ -92,7 +92,10 @@ function Browse() {
       <form className="toolbar" onSubmit={handleSearch}>
         <input aria-label="Search skill posts" placeholder="Search a skill, topic, or keyword" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
         <select aria-label="Filter by category" value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">All categories</option><option value="music">Music</option><option value="programming">Programming</option><option value="language">Language</option><option value="art">Art</option>
+          <option value="">All categories</option>
+          {CATEGORIES.map((cat) => (
+            <option key={cat.value} value={cat.value}>{cat.label}</option>
+          ))}
         </select>
         <select aria-label="Filter by post type" value={postType} onChange={(e) => setPostType(e.target.value)}>
           <option value="">Offers and requests</option><option value="offer">Offers</option><option value="request">Requests</option>

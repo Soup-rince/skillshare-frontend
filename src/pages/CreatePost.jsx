@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { createPost, updatePost, getPostById } from "../api";
 import { useUnsavedChangesWarning } from "../hooks/useUnsavedChangesWarning";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { CATEGORIES } from "../constants/categories";
 
 const emptyForm = {
   title: "",
@@ -133,10 +134,9 @@ function CreatePost() {
             <div className="field">
               <label htmlFor="post-category">Category</label>
               <select id="post-category" value={category} onChange={(e) => setCategory(e.target.value)}>
-                <option value="music">Music</option>
-                <option value="programming">Programming</option>
-                <option value="language">Language</option>
-                <option value="art">Art</option>
+                {CATEGORIES.map((cat) => (
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                ))}
               </select>
             </div>
             <div className="field">
