@@ -11,13 +11,14 @@ import Messages from "./pages/Messages";
 import CreatePost from "./pages/CreatePost";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminNavBar from "./components/AdminNavBar";
+import GettingStarted from "./pages/GettingStarted";
 import { ConfirmProvider } from "./contexts/ConfirmContext";
 
 function AppContent() {
   const token = localStorage.getItem("token");
   const isAdmin = localStorage.getItem("role") === "admin";
   const location = useLocation();
-  const isAuthPage = ["/login", "/register"].includes(location.pathname);
+  const isAuthPage = ["/login", "/register", "/getting-started"].includes(location.pathname);
 
   return (
     <div className="app-shell">
@@ -25,6 +26,7 @@ function AppContent() {
       <Routes>
         <Route path="/login" element={token ? <Navigate to="/browse" replace /> : <Login />} />
         <Route path="/register" element={token ? <Navigate to="/browse" replace /> : <Register />} />
+        <Route path="/getting-started" element={token ? <GettingStarted /> : <Navigate to="/login" />} />
         <Route path="/browse" element={token ? <Browse /> : <Navigate to="/login" />} />
         <Route path="/messages" element={token ? <Messages /> : <Navigate to="/login" />} />
         <Route path="/" element={<Navigate to={token ? "/browse" : "/login"} />} />
