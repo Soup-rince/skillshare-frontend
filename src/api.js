@@ -77,3 +77,33 @@ export const markWelcomeSeen = (token) =>
   axios.patch(`${API_URL}/users/me/welcome-seen`, {}, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
+  export const createReview = (data, token) =>
+  axios.post(`${API_URL}/reviews`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getUserReviews = (userId, token) =>
+  axios.get(`${API_URL}/reviews/user/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getMyReviewForUser = (userId, token) =>
+  axios.get(`${API_URL}/reviews/me/for/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const createExchange = (data, token) =>
+  axios.post(`${API_URL}/exchanges`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const confirmExchange = (id, token) =>
+  axios.patch(`${API_URL}/exchanges/${id}/confirm`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getExchangeWith = (userId, token) =>
+  axios.get(`${API_URL}/exchanges/with/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });

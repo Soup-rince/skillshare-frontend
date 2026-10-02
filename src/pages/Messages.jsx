@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FaSearch, FaPaperPlane, FaImage, FaVideo, FaMicrophone, FaPaperclip, FaTimes, FaStop, FaDownload } from "react-icons/fa";
-import { getInbox, getConversation, sendMessage, getUserProfile, uploadMedia } from "../api";
+import { FaSearch, FaPaperPlane, FaImage, FaVideo, FaMicrophone, FaPaperclip, FaTimes, FaStop, FaDownload, FaCheck, FaStar } from "react-icons/fa";
+import { getInbox, getConversation, sendMessage, getUserProfile, uploadMedia, getExchangeWith, createExchange, confirmExchange, getMyReviewForUser, createReview } from "../api";
+import ReviewForm from "../components/ReviewForm";
 
 function getInitials(name) {
   if (!name) return "?";
@@ -99,6 +100,9 @@ function Messages() {
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [lightboxName, setLightboxName] = useState("");
   const [lightboxType, setLightboxType] = useState("image");
+  const [exchange, setExchange] = useState(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [myReview, setMyReview] = useState(null);
   const token = localStorage.getItem("token");
   const myId = localStorage.getItem("userId");
   const streamRef = useRef(null);
@@ -164,6 +168,49 @@ function Messages() {
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
+
+  useEffect(() => {
+    if (!activePartner) {
+      setExchange(null);
+      setMyReview(null);
+      return;
+    }
+    const fetchExchangeAndReview = async () => {
+      try {
+        const [exRes, revRes] = await Promise.all([
+          getExchangeWith(activePartner.id, token),
+          getMyReviewForUser(activePartner.id, token)
+        ]);
+        setExchange(exRes.data);
+        setMyReview(revRes.data);
+      } catch {
+        // silent
+      }
+    };
+    fetchExchangeAndReview();
+  }, [activePartner, token]);
+
+  const handleMarkCompleted = async () => {
+    if (!activePartner) return;
+    try {
+      let exchangeId = exchange?._id;
+      if (!exchangeId) {
+        const res = await createExchange({ partner: activePartner.id }, token);
+        exchangeId = res.data._id;
+        setExchange(res.data);
+      }
+      const confirmRes = await confirmExchange(exchangeId, token);
+      setExchange(confirmRes.data);
+    } catch {
+      setError("Could not mark exchange as completed.");
+    }
+  };
+
+  const handleSubmitReview = async (payload) => {
+    const res = await createReview(payload, token);
+    setMyReview(res.data);
+    setShowReviewForm(false);
+  };
 
   const handleFileSelect = (e, type) => {
     const file = e.target.files?.[0];
@@ -282,6 +329,70 @@ function Messages() {
 
   const canSend = (content.trim() || pendingFile) && !uploading && !recording;
 
+  const renderExchangeHeader = () => {
+    if (!exchange) {
+      return (
+        <button
+          type="button"
+          className="button-small button-secondary"
+          onClick={handleMarkCompleted}
+        >
+          <FaCheck aria-hidden="true" />
+          <span>Mark as completed</span>
+        </button>
+      );
+    }
+
+    if (exchange.status === "pending") {
+      const iConfirmed =
+        (exchange.initiator?._id === myId && exchange.initiatorConfirmed) ||
+        (exchange.partner?._id === myId && exchange.partnerConfirmed);
+      const theyConfirmed =
+        (exchange.initiator?._id === myId && exchange.partnerConfirmed) ||
+        (exchange.partner?._id === myId && exchange.initiatorConfirmed);
+
+      if (iConfirmed && !theyConfirmed) {
+        return (
+          <span className="exchange-status exchange-status-pending">
+            Waiting for {activePartner.name} to confirm...
+          </span>
+        );
+      }
+
+      return (
+        <button
+          type="button"
+          className="button-small button-secondary"
+          onClick={handleMarkCompleted}
+        >
+          <FaCheck aria-hidden="true" />
+          <span>Confirm exchange</span>
+        </button>
+      );
+    }
+
+    if (exchange.status === "completed") {
+      return (
+        <div className="exchange-completed-actions">
+          <span className="exchange-completed-badge">
+            <FaCheck aria-hidden="true" />
+            <span>Exchange completed</span>
+          </span>
+          <button
+            type="button"
+            className="button-small"
+            onClick={() => setShowReviewForm(true)}
+          >
+            <FaStar aria-hidden="true" />
+            <span>{myReview ? "Update review" : "Leave a review"}</span>
+          </button>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <main className="page-container">
       <header className="page-heading">
@@ -358,6 +469,9 @@ function Messages() {
                   {getInitials(activePartner.name)}
                 </span>
                 <span className="message-header-name">{activePartner.name}</span>
+                <div className="message-header-exchange">
+                  {renderExchangeHeader()}
+                </div>
               </header>
               <div className="message-stream" ref={streamRef}>
                 {messageGroups.map((group) => (
@@ -568,6 +682,17 @@ function Messages() {
             </a>
           </div>
         </div>
+      )}
+
+      {activePartner && (
+        <ReviewForm
+          isOpen={showReviewForm}
+          revieweeId={activePartner.id}
+          revieweeName={activePartner.name}
+          existingReview={myReview}
+          onClose={() => setShowReviewForm(false)}
+          onSubmit={handleSubmitReview}
+        />
       )}
     </main>
   );

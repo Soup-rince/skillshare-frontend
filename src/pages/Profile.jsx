@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { FaCalendarAlt, FaEdit, FaEnvelope, FaBullseye, FaPalette, FaClock, FaGraduationCap } from "react-icons/fa";
-import { getUserProfile } from "../api";
+import { FaCalendarAlt, FaEdit, FaEnvelope, FaBullseye, FaPalette, FaClock, FaGraduationCap, FaStar } from "react-icons/fa";
+import { getUserProfile, getUserReviews, getMyReviewForUser, createReview } from "../api";
+import StarRating from "../components/StarRating";
+import ReviewForm from "../components/ReviewForm";
 
 function getInitials(name) {
   if (!name) return "?";
@@ -30,12 +32,20 @@ function formatMemberSince(dateStr) {
   return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 function Profile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("posts");
+  const [reviewsData, setReviewsData] = useState({ reviews: [], total: 0, average: 0 });
+  const [myReview, setMyReview] = useState(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
   const token = localStorage.getItem("token");
   const myId = localStorage.getItem("userId");
 
@@ -50,6 +60,40 @@ function Profile() {
     };
     fetchProfile();
   }, [id, token]);
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchReviews = async () => {
+      try {
+        const res = await getUserReviews(id, token);
+        setReviewsData(res.data);
+      } catch {
+        // silent
+      }
+    };
+    fetchReviews();
+  }, [id, token]);
+
+  useEffect(() => {
+    if (!id || id === myId) return;
+    const fetchMyReview = async () => {
+      try {
+        const res = await getMyReviewForUser(id, token);
+        setMyReview(res.data);
+      } catch {
+        // silent
+      }
+    };
+    fetchMyReview();
+  }, [id, myId, token]);
+
+  const handleSubmitReview = async (payload) => {
+    const res = await createReview(payload, token);
+    setMyReview(res.data);
+    const reviewsRes = await getUserReviews(id, token);
+    setReviewsData(reviewsRes.data);
+    setShowReviewForm(false);
+  };
 
   if (error) return <main className="page-container"><div className="empty-state"><h2>{error}</h2></div></main>;
   if (!data) return <main className="page-container"><div className="empty-state"><p>Loading profile...</p></div></main>;
@@ -78,6 +122,12 @@ function Profile() {
                   <span>Member since {memberSince}</span>
                 </span>
               )}
+              {reviewsData.total > 0 && (
+                <span className="profile-meta-item">
+                  <FaStar style={{ color: "#f59e0b" }} aria-hidden="true" />
+                  <span>{reviewsData.average} ({reviewsData.total} review{reviewsData.total > 1 ? "s" : ""})</span>
+                </span>
+              )}
             </div>
           </div>
           <div className="profile-header-actions">
@@ -103,6 +153,13 @@ function Profile() {
           onClick={() => setActiveTab("posts")}
         >
           Posts <span className="profile-tab-count">{totalPosts}</span>
+        </button>
+        <button
+          type="button"
+          className={`profile-tab ${activeTab === "reviews" ? "active" : ""}`}
+          onClick={() => setActiveTab("reviews")}
+        >
+          Reviews <span className="profile-tab-count">{reviewsData.total}</span>
         </button>
         <button
           type="button"
@@ -140,6 +197,69 @@ function Profile() {
                 );
               })}
             </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === "reviews" && (
+        <section className="profile-reviews" aria-label="Reviews">
+          {!isOwnProfile && (
+            <div className="reviews-action-bar">
+              <button
+                type="button"
+                className={myReview ? "button-secondary" : "button"}
+                onClick={() => setShowReviewForm(true)}
+              >
+                <FaStar aria-hidden="true" />
+                <span>{myReview ? "Update your review" : "Leave a review"}</span>
+              </button>
+            </div>
+          )}
+
+          {reviewsData.total === 0 ? (
+            <div className="empty-state">
+              <span className="empty-state-icon"><FaStar /></span>
+              <h2>No reviews yet</h2>
+              <p>
+                {isOwnProfile
+                  ? "Complete skill exchanges to receive reviews from other members."
+                  : "Be the first to leave a review for this member."}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="reviews-summary">
+                <div className="reviews-summary-score">
+                  <strong>{reviewsData.average}</strong>
+                  <StarRating value={Math.round(reviewsData.average)} size="sm" readOnly />
+                  <span>{reviewsData.total} review{reviewsData.total > 1 ? "s" : ""}</span>
+                </div>
+              </div>
+
+              <div className="review-list">
+                {reviewsData.reviews.map((review) => (
+                  <article className="review-item" key={review._id}>
+                    <div className="review-item-header">
+                      <span
+                        className="review-item-avatar"
+                        style={{ background: getAvatarColor(review.reviewer?.name || "?") }}
+                        aria-hidden="true"
+                      >
+                        {getInitials(review.reviewer?.name || "?")}
+                      </span>
+                      <div className="review-item-info">
+                        <strong>{review.reviewer?.name || "Anonymous"}</strong>
+                        <span className="review-item-date">{formatDate(review.createdAt)}</span>
+                      </div>
+                      <StarRating value={review.rating} size="sm" readOnly />
+                    </div>
+                    {review.comment && (
+                      <p className="review-item-comment">{review.comment}</p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </>
           )}
         </section>
       )}
@@ -228,6 +348,15 @@ function Profile() {
           </div>
         </section>
       )}
+
+      <ReviewForm
+        isOpen={showReviewForm}
+        revieweeId={id}
+        revieweeName={user.name}
+        existingReview={myReview}
+        onClose={() => setShowReviewForm(false)}
+        onSubmit={handleSubmitReview}
+      />
     </main>
   );
 }
