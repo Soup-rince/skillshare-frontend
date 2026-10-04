@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getSkillPosts } from "../api";
+import { FaStar } from "react-icons/fa";
+import { getSkillPosts, getMatches } from "../api";
 import { CATEGORIES } from "../constants/categories";
 
 
@@ -38,10 +39,12 @@ function shuffleArray(array) {
 
 function Browse() {
   const [posts, setPosts] = useState([]);
+  const [matches, setMatches] = useState([]);
   const [keyword, setKeyword] = useState("");
   const [category, setCategory] = useState("");
   const [postType, setPostType] = useState("");
   const [error, setError] = useState("");
+  const token = localStorage.getItem("token");
 
   const fetchPosts = async () => {
     const params = {};
@@ -61,14 +64,30 @@ function Browse() {
     }
   };
 
+  const fetchMatches = async () => {
+    try {
+      const res = await getMatches(token);
+      setMatches(res.data.matches || []);
+    } catch {
+      setMatches([]);
+    }
+  };
+
   useEffect(() => {
-    const initialLoad = window.setTimeout(fetchPosts, 0);
+    const initialLoad = window.setTimeout(() => {
+      fetchPosts();
+      fetchMatches();
+    }, 0);
     return () => window.clearTimeout(initialLoad);
   }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
     fetchPosts();
+  };
+
+  const formatScore = (score) => {
+    return `${Math.round(score * 100)}%`;
   };
 
   return (
@@ -80,6 +99,55 @@ function Browse() {
           <p>Discover what people can teach and what they want to learn.</p>
         </div>
       </header>
+
+      {matches.length > 0 && (
+        <section className="matches-section" aria-label="Recommended for you">
+          <div className="matches-header">
+            <h2>
+              <FaStar aria-hidden="true" />
+              <span>Recommended for you</span>
+            </h2>
+            <p>Based on your skills, interests, and availability</p>
+          </div>
+          <div className="matches-scroll">
+            {matches.map((match) => {
+              const post = match.post;
+              const ownerName = post?.owner?.name || "SkillShare member";
+              const scorePercent = Math.round((match.matchScore || 0) * 100);
+              return (
+                <Link
+                  className="match-card"
+                  key={match.postId}
+                  to={`/posts/${match.postId}`}
+                >
+                  <div className="match-score-badge">
+                    {scorePercent}% match
+                  </div>
+                  <div className="match-card-body">
+                    <span
+                      className="match-avatar"
+                      style={{ background: getAvatarColor(ownerName) }}
+                      aria-hidden="true"
+                    >
+                      {getInitials(ownerName)}
+                    </span>
+                    <div className="match-info">
+                      <strong>{post?.title || "Untitled post"}</strong>
+                      <span className="match-owner">by {ownerName}</span>
+                    </div>
+                  </div>
+                  <div className="match-card-footer">
+                    <span className={`tag ${post?.postType === "offer" ? "tag-offer" : "tag-request"}`}>
+                      {post?.postType}
+                    </span>
+                    <span className="match-category">{post?.category}</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="share-banner" aria-label="Share a skill">
         <div className="share-banner-text">

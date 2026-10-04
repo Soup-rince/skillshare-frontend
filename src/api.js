@@ -107,3 +107,8 @@ export const getExchangeWith = (userId, token) =>
   axios.get(`${API_URL}/exchanges/with/${userId}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
+  export const getMatches = (token) =>
+  axios.get(`${API_URL}/match`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
