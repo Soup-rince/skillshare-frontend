@@ -1,4 +1,12 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import {
+  FaCompass,
+  FaChartLine,
+  FaEnvelope,
+  FaUser,
+  FaSignOutAlt,
+  FaShieldAlt
+} from "react-icons/fa";
 
 function AdminNavBar() {
   const navigate = useNavigate();
@@ -8,6 +16,7 @@ function AdminNavBar() {
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
     localStorage.removeItem("role");
+    localStorage.removeItem("userName");
     navigate("/login");
   };
 
@@ -23,15 +32,33 @@ function AdminNavBar() {
       </div>
 
       <div className="admin-nav-links">
-        <NavLink className="admin-nav-link" to="/browse">Browse</NavLink>
-        <NavLink className="admin-nav-link" to="/dashboard">Dashboard</NavLink>
-        <NavLink className="admin-nav-link" to="/messages">Messages</NavLink>
-        <NavLink className="admin-nav-link" to={`/profile/${userId}`}>Profile</NavLink>
-        <NavLink className="admin-nav-link admin-panel-link" to="/admin">Admin panel</NavLink>
+        <NavLink className="admin-nav-link" to="/browse">
+          <FaCompass className="admin-nav-icon" aria-hidden="true" />
+          <span>Browse</span>
+        </NavLink>
+        <NavLink className="admin-nav-link" to="/dashboard">
+          <FaChartLine className="admin-nav-icon" aria-hidden="true" />
+          <span>Dashboard</span>
+        </NavLink>
+        <NavLink className="admin-nav-link" to="/messages">
+          <FaEnvelope className="admin-nav-icon" aria-hidden="true" />
+          <span>Messages</span>
+        </NavLink>
+        <NavLink className="admin-nav-link" to={`/profile/${userId}`}>
+          <FaUser className="admin-nav-icon" aria-hidden="true" />
+          <span>Profile</span>
+        </NavLink>
+        <NavLink className="admin-nav-link admin-panel-link" to="/admin">
+          <FaShieldAlt className="admin-nav-icon" aria-hidden="true" />
+          <span>Admin panel</span>
+        </NavLink>
       </div>
 
       <div className="admin-nav-actions">
-        <button className="admin-logout" type="button" onClick={handleLogout}>Log out</button>
+        <button className="admin-logout" type="button" onClick={handleLogout}>
+          <FaSignOutAlt className="admin-nav-icon" aria-hidden="true" />
+          <span>Log out</span>
+        </button>
       </div>
     </nav>
   );

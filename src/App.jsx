@@ -16,7 +16,8 @@ import { ConfirmProvider } from "./contexts/ConfirmContext";
 
 function AppContent() {
   const token = localStorage.getItem("token");
-  const isAdmin = localStorage.getItem("role") === "admin";
+  const userRole = localStorage.getItem("role");
+  const isAdmin = userRole === "admin" || userRole === "super_admin";
   const location = useLocation();
   const isAuthPage = ["/login", "/register", "/getting-started"].includes(location.pathname);
 

@@ -1,7 +1,29 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { FaCalendarAlt, FaEdit, FaEnvelope, FaBullseye, FaPalette, FaClock, FaGraduationCap, FaStar } from "react-icons/fa";
-import { getUserProfile, getUserReviews, getMyReviewForUser, createReview } from "../api";
+import {
+  FaCalendarAlt,
+  FaEdit,
+  FaEnvelope,
+  FaBullseye,
+  FaPalette,
+  FaClock,
+  FaGraduationCap,
+  FaStar,
+  FaUser,
+  FaUserShield,
+  FaUserSlash,
+  FaUserCheck,
+  FaBan
+} from "react-icons/fa";
+import {
+  getUserProfile,
+  getUserReviews,
+  getMyReviewForUser,
+  createReview,
+  suspendUser,
+  unsuspendUser
+} from "../api";
+import { useConfirm } from "../contexts/ConfirmContext";
 import StarRating from "../components/StarRating";
 import ReviewForm from "../components/ReviewForm";
 
@@ -40,24 +62,28 @@ function formatDate(dateStr) {
 function Profile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("posts");
   const [reviewsData, setReviewsData] = useState({ reviews: [], total: 0, average: 0 });
   const [myReview, setMyReview] = useState(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const token = localStorage.getItem("token");
   const myId = localStorage.getItem("userId");
+  const isSuperAdmin = localStorage.getItem("role") === "super_admin";
+
+  const fetchProfile = async () => {
+    try {
+      const res = await getUserProfile(id, token);
+      setData(res.data);
+    } catch {
+      setError("User not found.");
+    }
+  };
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await getUserProfile(id, token);
-        setData(res.data);
-      } catch {
-        setError("User not found.");
-      }
-    };
     fetchProfile();
   }, [id, token]);
 
@@ -95,6 +121,43 @@ function Profile() {
     setShowReviewForm(false);
   };
 
+  const handleSuspendToggle = async () => {
+    if (!data) return;
+    const user = data.user;
+
+    const action = user.isSuspended ? "Unsuspend" : "Suspend";
+    const shouldProceed = await confirm({
+      title: `${action} user`,
+      message: user.isSuspended
+        ? `Restore access for ${user.name}?`
+        : `Suspend ${user.name}? They will not be able to log in.`,
+      confirmLabel: action,
+      cancelLabel: "Cancel",
+      tone: user.isSuspended ? "info" : "danger",
+    });
+
+    if (!shouldProceed) return;
+
+    try {
+      setActionLoading(true);
+      setError("");
+      if (user.isSuspended) {
+        await unsuspendUser(user._id, token);
+      } else {
+        await suspendUser(
+          user._id,
+          { reason: "Violation of community guidelines" },
+          token
+        );
+      }
+      await fetchProfile();
+    } catch (err) {
+      setError(err.response?.data?.message || "Action failed.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (error) return <main className="page-container"><div className="empty-state"><h2>{error}</h2></div></main>;
   if (!data) return <main className="page-container"><div className="empty-state"><p>Loading profile...</p></div></main>;
 
@@ -105,6 +168,7 @@ function Profile() {
   const memberSince = formatMemberSince(user.createdAt);
   const hasInterests = user.interests && user.interests.length > 0;
   const hasHobbies = user.hobbies && user.hobbies.length > 0;
+  const canSuspend = isSuperAdmin && !isOwnProfile && user.role !== "super_admin";
 
   return (
     <main className="page-container profile-page">
@@ -114,7 +178,18 @@ function Profile() {
             {getInitials(user.name)}
           </div>
           <div className="profile-header-info">
-            <h1>{user.name}</h1>
+            <div className="profile-name-row">
+              <h1>{user.name}</h1>
+              <span className={`role-badge role-${user.role}`}>
+                {user.role === "member" ? <FaUser /> : <FaUserShield />}
+                <span>{user.role.replace("_", " ")}</span>
+              </span>
+              {user.isSuspended && (
+                <span className="suspended-badge">
+                  <FaBan /> Suspended
+                </span>
+              )}
+            </div>
             <div className="profile-meta">
               {memberSince && (
                 <span className="profile-meta-item">
@@ -129,6 +204,11 @@ function Profile() {
                 </span>
               )}
             </div>
+            {user.isSuspended && user.suspendedReason && (
+              <p className="profile-suspended-note">
+                Reason: {user.suspendedReason}
+              </p>
+            )}
           </div>
           <div className="profile-header-actions">
             {isOwnProfile ? (
@@ -137,10 +217,32 @@ function Profile() {
                 <span>Edit profile</span>
               </Link>
             ) : (
-              <button className="button" onClick={() => navigate(`/messages?to=${id}`)}>
-                <FaEnvelope aria-hidden="true" />
-                <span>Message</span>
-              </button>
+              <>
+                <button className="button" onClick={() => navigate(`/messages?to=${id}`)}>
+                  <FaEnvelope aria-hidden="true" />
+                  <span>Message</span>
+                </button>
+                {canSuspend && (
+                  <button
+                    className={user.isSuspended ? "button-secondary" : "button-danger"}
+                    type="button"
+                    onClick={handleSuspendToggle}
+                    disabled={actionLoading}
+                  >
+                    {user.isSuspended ? (
+                      <>
+                        <FaUserCheck aria-hidden="true" />
+                        <span>{actionLoading ? "Loading..." : "Unsuspend"}</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaUserSlash aria-hidden="true" />
+                        <span>{actionLoading ? "Loading..." : "Suspend"}</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -86,10 +86,6 @@ function Browse() {
     fetchPosts();
   };
 
-  const formatScore = (score) => {
-    return `${Math.round(score * 100)}%`;
-  };
-
   return (
     <main className="page-container">
       <header className="page-heading">
