@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FaFileAlt, FaEnvelope, FaBolt, FaPlusCircle, FaSearch } from "react-icons/fa";
+import { FaFileAlt, FaEnvelope, FaBolt, FaPlusCircle, FaSearch, FaBell } from "react-icons/fa";
 import { getDashboard } from "../api";
+import {
+  registerServiceWorker,
+  requestPushPermission,
+  getPushPermissionStatus
+} from "../utils/pushNotifications";
 
 function Dashboard() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [pushStatus, setPushStatus] = useState("default");
+  const [pushLoading, setPushLoading] = useState(false);
   const token = localStorage.getItem("token");
   const userName = localStorage.getItem("userName") || "there";
 
@@ -20,6 +27,27 @@ function Dashboard() {
     };
     fetchDashboard();
   }, [token]);
+
+  useEffect(() => {
+    const init = async () => {
+      await registerServiceWorker();
+      const status = await getPushPermissionStatus();
+      setPushStatus(status);
+    };
+    init();
+  }, []);
+
+  const handleEnablePush = async () => {
+    try {
+      setPushLoading(true);
+      await requestPushPermission(token);
+      setPushStatus("granted");
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   if (error) return <main className="page-container"><p className="alert">{error}</p></main>;
   if (!data) return <main className="page-container"><div className="empty-state"><p>Loading your dashboard...</p></div></main>;
@@ -37,6 +65,23 @@ function Dashboard() {
           <span>New post</span>
         </Link>
       </header>
+
+      {pushStatus !== "granted" && pushStatus !== "unsupported" && (
+        <section className="push-prompt">
+          <div className="push-prompt-icon"><FaBell /></div>
+          <div className="push-prompt-text">
+            <strong>Enable notifications</strong>
+            <p>Get notified about new messages and important updates.</p>
+          </div>
+          <button
+            className="button"
+            onClick={handleEnablePush}
+            disabled={pushLoading}
+          >
+            {pushLoading ? "Enabling..." : "Enable"}
+          </button>
+        </section>
+      )}
 
       <section className="dashboard-stats">
         <div className="stat-card">

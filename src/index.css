@@ -3194,3 +3194,53 @@ a.post-card:hover .post-card-link {
     font-size: 0.78rem;
   }
 }
+
+.push-prompt {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    margin-bottom: 22px;
+    border: 1px solid #dce1f4;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #f6f7ff 0%, #eef0ff 100%);
+}
+
+.push-prompt-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 12px;
+    color: #2639ba;
+    background: #fff;
+    font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(38, 57, 186, 0.15);
+}
+
+.push-prompt-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.push-prompt-text strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #152049;
+    font-size: 0.92rem;
+}
+
+.push-prompt-text p {
+    margin: 0;
+    color: #737e98;
+    font-size: 0.83rem;
+}
+
+@media (max-width: 640px) {
+    .push-prompt {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+}

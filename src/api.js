@@ -154,3 +154,16 @@ export const changeUserRole = (id, data, token) =>
   axios.patch(`${API_URL}/admin/users/${id}/role`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
+  export const getVapidPublicKey = () =>
+  axios.get(`${API_URL}/push/vapid-public-key`);
+
+export const subscribePush = (subscription, token) =>
+  axios.post(`${API_URL}/push/subscribe`, { subscription }, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const unsubscribePush = (token) =>
+  axios.post(`${API_URL}/push/unsubscribe`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
