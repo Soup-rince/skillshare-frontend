@@ -175,3 +175,9 @@ export const unsubscribePush = (token) =>
       "Content-Type": "multipart/form-data",
     },
   });
+
+  export const forgotPassword = (data) =>
+  axios.post(`${API_URL}/auth/forgot-password`, data);
+
+export const resetPassword = (token, data) =>
+  axios.post(`${API_URL}/auth/reset-password/${token}`, data);
