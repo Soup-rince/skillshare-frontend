@@ -3423,3 +3423,83 @@ a.post-card:hover .post-card-link {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+.auth-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  color: #66708a;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.18s;
+}
+
+.auth-back-link:hover {
+  color: #2639ba;
+}
+
+.auth-back-link svg {
+  font-size: 0.78rem;
+}
+
+.forgot-password-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: #2639ba;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
+}
+
+.auth-success-state {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.auth-success-icon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  place-items: center;
+  border-radius: 50%;
+  color: #2639ba;
+  background: #eef0ff;
+  font-size: 1.5rem;
+}
+
+.auth-success-icon-green {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.auth-success-state h1 {
+  margin: 0 0 12px;
+  color: #152049;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+.auth-success-state p {
+  margin: 0 0 12px;
+  color: #59647f;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.auth-success-note {
+  font-size: 0.82rem !important;
+  color: #8992a8 !important;
+}
+
+.auth-success-state .button {
+  margin-top: 16px;
+  display: inline-flex;
+}

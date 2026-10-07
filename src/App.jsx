@@ -13,6 +13,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminNavBar from "./components/AdminNavBar";
 import GettingStarted from "./pages/GettingStarted";
 import OfflineBanner from "./components/OfflineBanner";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import { ConfirmProvider } from "./contexts/ConfirmContext";
 
 function AppContent() {
@@ -20,7 +22,8 @@ function AppContent() {
   const userRole = localStorage.getItem("role");
   const isAdmin = userRole === "admin" || userRole === "super_admin";
   const location = useLocation();
-  const isAuthPage = ["/login", "/register", "/getting-started"].includes(location.pathname);
+  const isAuthPage = ["/login", "/register", "/getting-started", "/forgot-password"].includes(location.pathname)
+    || location.pathname.startsWith("/reset-password/");
 
   return (
     <div className="app-shell">
@@ -29,6 +32,8 @@ function AppContent() {
       <Routes>
         <Route path="/login" element={token ? <Navigate to="/browse" replace /> : <Login />} />
         <Route path="/register" element={token ? <Navigate to="/browse" replace /> : <Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/getting-started" element={token ? <GettingStarted /> : <Navigate to="/login" />} />
         <Route path="/browse" element={token ? <Browse /> : <Navigate to="/login" />} />
         <Route path="/messages" element={token ? <Messages /> : <Navigate to="/login" />} />

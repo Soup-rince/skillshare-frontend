@@ -89,6 +89,9 @@ function Login() {
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
+              <Link className="forgot-password-link" to="/forgot-password">
+                Forgot password?
+              </Link>
             </div>
             <button className="button" type="submit">Log in</button>
           </form>
