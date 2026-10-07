@@ -12,6 +12,7 @@ import CreatePost from "./pages/CreatePost";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminNavBar from "./components/AdminNavBar";
 import GettingStarted from "./pages/GettingStarted";
+import OfflineBanner from "./components/OfflineBanner";
 import { ConfirmProvider } from "./contexts/ConfirmContext";
 
 function AppContent() {
@@ -23,6 +24,7 @@ function AppContent() {
 
   return (
     <div className="app-shell">
+      <OfflineBanner />
       {!isAuthPage && (token && isAdmin ? <AdminNavBar /> : <NavBar />)}
       <Routes>
         <Route path="/login" element={token ? <Navigate to="/browse" replace /> : <Login />} />

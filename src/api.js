@@ -167,3 +167,11 @@ export const unsubscribePush = (token) =>
   axios.post(`${API_URL}/push/unsubscribe`, {}, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
+  export const uploadPostImage = (formData, token) =>
+  axios.post(`${API_URL}/posts/upload`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  });

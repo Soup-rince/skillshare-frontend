@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { createPost, updatePost, getPostById } from "../api";
+import { FaImage, FaTimes, FaPlus } from "react-icons/fa";
+import { createPost, updatePost, getPostById, uploadPostImage } from "../api";
 import { useUnsavedChangesWarning } from "../hooks/useUnsavedChangesWarning";
 import { useConfirm } from "../contexts/ConfirmContext";
 import { CATEGORIES } from "../constants/categories";
@@ -11,6 +12,7 @@ const emptyForm = {
   category: "music",
   proficiencyLevel: "beginner",
   postType: "offer",
+  images: [],
 };
 
 function CreatePost() {
@@ -24,8 +26,11 @@ function CreatePost() {
   const [category, setCategory] = useState("music");
   const [proficiencyLevel, setProficiencyLevel] = useState("beginner");
   const [postType, setPostType] = useState("offer");
+  const [images, setImages] = useState([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState("");
   const [initialValues, setInitialValues] = useState(isEditMode ? null : emptyForm);
+  const imageInputRef = useRef(null);
 
   useEffect(() => {
     if (!isEditMode) return;
@@ -38,12 +43,14 @@ function CreatePost() {
           category: res.data.category,
           proficiencyLevel: res.data.proficiencyLevel,
           postType: res.data.postType,
+          images: res.data.images || [],
         };
         setTitle(loaded.title);
         setDescription(loaded.description);
         setCategory(loaded.category);
         setProficiencyLevel(loaded.proficiencyLevel);
         setPostType(loaded.postType);
+        setImages(loaded.images);
         setInitialValues(loaded);
       } catch {
         setError("We could not load this post.");
@@ -52,12 +59,45 @@ function CreatePost() {
     loadPost();
   }, [id, isEditMode]);
 
-  const currentValues = { title, description, category, proficiencyLevel, postType };
+  const currentValues = { title, description, category, proficiencyLevel, postType, images };
   const isDirty = initialValues !== null && JSON.stringify(currentValues) !== JSON.stringify(initialValues);
 
   useUnsavedChangesWarning(isDirty, {
     message: "If you leave now, your edits will be lost.",
   });
+
+  const handleImageSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (images.length >= 3) {
+      setError("Maximum 3 images per post.");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setError("Only image files are allowed.");
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      setError("");
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await uploadPostImage(formData, token);
+      setImages((current) => [...current, res.data.imageUrl]);
+      e.target.value = "";
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not upload image.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleRemoveImage = (index) => {
+    setImages((current) => current.filter((_, i) => i !== index));
+  };
 
   const handleCancel = async () => {
     if (!isDirty) {
@@ -81,7 +121,7 @@ function CreatePost() {
       setError("Title and description cannot be empty.");
       return;
     }
-    const payload = { title, description, category, proficiencyLevel, postType };
+    const payload = { title, description, category, proficiencyLevel, postType, images };
     try {
       if (isEditMode) {
         await updatePost(id, payload, token);
@@ -130,6 +170,50 @@ function CreatePost() {
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
+
+          <div className="field">
+            <label>Images (optional, max 3)</label>
+            <div className="post-image-grid">
+              {images.map((url, i) => (
+                <div className="post-image-preview" key={i}>
+                  <img src={url} alt={`Upload ${i + 1}`} />
+                  <button
+                    type="button"
+                    className="post-image-remove"
+                    onClick={() => handleRemoveImage(i)}
+                    aria-label="Remove image"
+                  >
+                    <FaTimes />
+                  </button>
+                </div>
+              ))}
+              {images.length < 3 && (
+                <button
+                  type="button"
+                  className="post-image-add"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? (
+                    <span>Uploading...</span>
+                  ) : (
+                    <>
+                      <FaPlus />
+                      <span>Add image</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={handleImageSelect}
+            />
+          </div>
+
           <div className="form-grid">
             <div className="field">
               <label htmlFor="post-category">Category</label>

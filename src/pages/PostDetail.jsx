@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { FaFlag, FaTrash } from "react-icons/fa";
+import { FaFlag, FaTrash, FaTimes, FaDownload } from "react-icons/fa";
 import { getPostById, deletePost, createReport } from "../api";
 import ReportForm from "../components/ReportForm";
 
@@ -14,8 +14,10 @@ function PostDetail() {
   const [actionError, setActionError] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [showReportForm, setShowReportForm] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [lightboxName, setLightboxName] = useState("");
 
-  const isAdmin = localStorage.getItem("role") === "admin";
+  const isAdmin = localStorage.getItem("role") === "admin" || localStorage.getItem("role") === "super_admin";
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -24,6 +26,10 @@ function PostDetail() {
     };
     fetchPost();
   }, [id]);
+
+  const closeLightbox = () => {
+    setLightboxUrl(null);
+  };
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
@@ -80,6 +86,24 @@ function PostDetail() {
         <div className="tag-row"><span className={`tag ${post.postType === "offer" ? "tag-offer" : "tag-request"}`}>{post.postType}</span><span className="tag tag-neutral">{post.category}</span><span className="tag tag-neutral">{post.proficiencyLevel}</span></div>
         <h1 className="detail-title">{post.title}</h1>
         <p className="detail-copy">{post.description}</p>
+
+        {post.images && post.images.length > 0 && (
+          <div className="detail-images">
+            {post.images.map((url, i) => (
+              <img
+                key={i}
+                src={url}
+                alt={`Post image ${i + 1}`}
+                className="detail-image"
+                onClick={() => {
+                  setLightboxUrl(url);
+                  setLightboxName(`Post image ${i + 1}`);
+                }}
+              />
+            ))}
+          </div>
+        )}
+
         {actionError && (
           <p className="alert" style={{ marginTop: 24 }}>
             {actionError}
@@ -137,6 +161,29 @@ function PostDetail() {
         onClose={() => setShowReportForm(false)}
         onSubmit={handleReport}
       />
+
+      {lightboxUrl && (
+        <div className="lightbox-overlay" onClick={closeLightbox}>
+          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="lightbox-close"
+              onClick={closeLightbox}
+              aria-label="Close"
+            >
+              <FaTimes />
+            </button>
+            <img src={lightboxUrl} alt={lightboxName || "image"} className="lightbox-image" />
+            <a
+              className="lightbox-download"
+              href={`${lightboxUrl.replace("/upload/", "/upload/fl_attachment/")}?filename=${encodeURIComponent(lightboxName || "image")}`}
+            >
+              <FaDownload aria-hidden="true" />
+              <span>Download</span>
+            </a>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

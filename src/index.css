@@ -3244,3 +3244,182 @@ a.post-card:hover .post-card-link {
         text-align: center;
     }
 }
+
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 18px;
+  color: #fff;
+  background: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+  animation: offline-slide 0.3s ease-out;
+}
+
+@keyframes offline-slide {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+.offline-banner svg {
+  font-size: 0.95rem;
+  animation: offline-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes offline-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@media (max-width: 640px) {
+  .offline-banner {
+    font-size: 0.78rem;
+    padding: 8px 14px;
+  }
+}
+
+/* ============ POST IMAGE UPLOAD (CreatePost) ============ */
+
+.post-image-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.post-image-preview {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f6f7fb;
+}
+
+.post-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.post-image-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(220, 38, 38, 0.85);
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.post-image-remove:hover {
+  background: #dc2626;
+}
+
+.post-image-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  aspect-ratio: 1;
+  border: 2px dashed #dce1ed;
+  border-radius: 10px;
+  color: #66708a;
+  background: #fafbff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s, background 0.18s;
+}
+
+.post-image-add:hover {
+  border-color: #2639ba;
+  color: #2639ba;
+  background: #f6f7ff;
+}
+
+.post-image-add svg {
+  font-size: 0.9rem;
+}
+
+.post-image-add:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ============ POST IMAGES (PostDetail) ============ */
+
+.detail-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.detail-image {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.detail-image:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px rgba(32, 54, 113, 0.15);
+}
+
+/* ============ POST IMAGES (Browse) ============ */
+
+.post-card-image {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f6f7fb;
+}
+
+.post-card-image-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.post-card-image-count {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.75);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .post-image-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .detail-images {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

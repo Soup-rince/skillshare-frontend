@@ -185,6 +185,20 @@ function Browse() {
                 </span>
                 <span className={`tag ${post.postType === "offer" ? "tag-offer" : "tag-request"}`}>{post.postType}</span>
               </div>
+              {post.images && post.images.length > 0 && (
+                <div className="post-card-image">
+                  <img
+                    src={post.images[0]}
+                    alt={post.title}
+                    className="post-card-image-thumb"
+                  />
+                  {post.images.length > 1 && (
+                    <span className="post-card-image-count">
+                      +{post.images.length - 1}
+                    </span>
+                  )}
+                </div>
+              )}
               <h2>{post.title}</h2>
               <p className="post-description">{post.description}</p>
               <p className="post-meta">{post.category} · {post.proficiencyLevel} · by {ownerName}</p>
