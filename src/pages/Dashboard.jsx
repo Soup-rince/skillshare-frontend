@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FaFileAlt, FaEnvelope, FaBolt, FaPlusCircle, FaSearch, FaBell } from "react-icons/fa";
-import { getDashboard } from "../api";
+import { FaFileAlt, FaEnvelope, FaBolt, FaPlusCircle, FaBell, FaStar } from "react-icons/fa";
+import { getDashboard, getUserReviews } from "../api";
 import {
   registerServiceWorker,
   requestPushPermission,
@@ -10,10 +10,12 @@ import {
 
 function Dashboard() {
   const [data, setData] = useState(null);
+  const [reviewsData, setReviewsData] = useState({ total: 0, average: 0 });
   const [error, setError] = useState("");
   const [pushStatus, setPushStatus] = useState("default");
   const [pushLoading, setPushLoading] = useState(false);
   const token = localStorage.getItem("token");
+  const userId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || "there";
 
   useEffect(() => {
@@ -27,6 +29,21 @@ function Dashboard() {
     };
     fetchDashboard();
   }, [token]);
+
+  useEffect(() => {
+    if (!userId || !token) return;
+    const fetchReviews = async () => {
+      try {
+        const res = await getUserReviews(userId, token);
+        setReviewsData({
+          total: res.data.total || 0,
+          average: res.data.average || 0
+        });
+      } catch {
+      }
+    };
+    fetchReviews();
+  }, [userId, token]);
 
   useEffect(() => {
     const init = async () => {
@@ -101,21 +118,18 @@ function Dashboard() {
           <span className="stat-label">Recent activity</span>
           <strong className="stat-value">{data.recentMessages.length}</strong>
         </div>
-      </section>
-
-      <section className="quick-actions" aria-label="Quick actions">
-        <Link className="quick-action" to="/create-post">
-          <span className="quick-action-icon" aria-hidden="true"><FaPlusCircle /></span>
-          <span>Share a skill</span>
-        </Link>
-        <Link className="quick-action" to="/browse">
-          <span className="quick-action-icon" aria-hidden="true"><FaSearch /></span>
-          <span>Browse skills</span>
-        </Link>
-        <Link className="quick-action" to="/messages">
-          <span className="quick-action-icon" aria-hidden="true"><FaEnvelope /></span>
-          <span>View messages</span>
-        </Link>
+        <div className="stat-card">
+          <span className="stat-icon" aria-hidden="true"><FaStar /></span>
+          <span className="stat-label">Average rating</span>
+          <strong className="stat-value">
+            {reviewsData.total > 0 ? reviewsData.average : "—"}
+          </strong>
+          {reviewsData.total > 0 && (
+            <small className="stat-hint">
+              {reviewsData.total} review{reviewsData.total > 1 ? "s" : ""}
+            </small>
+          )}
+        </div>
       </section>
 
       <h2 className="section-title">Your skill posts</h2>

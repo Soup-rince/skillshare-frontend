@@ -3,10 +3,12 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { FaFlag, FaTrash, FaTimes, FaDownload } from "react-icons/fa";
 import { getPostById, deletePost, createReport } from "../api";
 import ReportForm from "../components/ReportForm";
+import { useConfirm } from "../contexts/ConfirmContext";
 
 function PostDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [post, setPost] = useState(null);
   const [error, setError] = useState("");
   const myId = localStorage.getItem("userId");
@@ -32,10 +34,14 @@ function PostDetail() {
   };
 
   const handleDelete = async () => {
-    const confirmed = window.confirm(
-      "Delete this post? This action cannot be undone."
-    );
-    if (!confirmed) return;
+    const shouldDelete = await confirm({
+      title: "Delete this post?",
+      message: `Your post "${post?.title || "Untitled"}" will be permanently deleted. This action cannot be undone.`,
+      confirmLabel: "Delete post",
+      cancelLabel: "Cancel",
+      tone: "danger",
+    });
+    if (!shouldDelete) return;
     try {
       setDeleting(true);
       setActionError("");
@@ -51,10 +57,14 @@ function PostDetail() {
   };
 
   const handleAdminDelete = async () => {
-    const confirmed = window.confirm(
-      "[Admin] Delete this post? This action cannot be undone."
-    );
-    if (!confirmed) return;
+    const shouldDelete = await confirm({
+      title: "Delete this post?",
+      message: `The post "${post?.title || "Untitled"}" will be permanently deleted. This action cannot be undone. The post owner will be notified.`,
+      confirmLabel: "Delete post",
+      cancelLabel: "Cancel",
+      tone: "danger",
+    });
+    if (!shouldDelete) return;
     try {
       setDeleting(true);
       setActionError("");
@@ -143,14 +153,16 @@ function PostDetail() {
                 <span>{deleting ? "Deleting..." : "Delete post (admin)"}</span>
               </button>
             )}
-            <button
-              className="report-button"
-              type="button"
-              onClick={() => setShowReportForm(true)}
-            >
-              <FaFlag aria-hidden="true" />
-              <span>Report</span>
-            </button>
+            {!isAdmin && (
+              <button
+                className="report-button"
+                type="button"
+                onClick={() => setShowReportForm(true)}
+              >
+                <FaFlag aria-hidden="true" />
+                <span>Report</span>
+              </button>
+            )}
           </div>
         )}
       </article>

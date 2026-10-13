@@ -9,6 +9,7 @@ import {
   updateReportStatus,
 } from "../api";
 import UserManagementTab from "../components/UserManagementTab";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 function AdminDashboard() {
   const [accessGranted, setAccessGranted] = useState(null);
@@ -20,6 +21,7 @@ function AdminDashboard() {
   const [reportActionId, setReportActionId] = useState("");
   const [postSearch, setPostSearch] = useState("");
   const [reportSearch, setReportSearch] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const token = localStorage.getItem("token");
   const isSuperAdmin = localStorage.getItem("role") === "super_admin";
@@ -50,90 +52,113 @@ function AdminDashboard() {
     init();
   }, [token]);
 
-  const handleDelete = async (postId, postTitle) => {
-    const confirmed = window.confirm(
-      `Delete "${postTitle}"? This action cannot be undone.`
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setDeletingId(postId);
-      setError("");
-
-      await deletePost(postId, token);
-
-      setPosts((currentPosts) =>
-        currentPosts.filter((post) => post._id !== postId)
-      );
-      setReports((currentReports) =>
-        currentReports.filter((r) => r.post?._id !== postId)
-      );
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Unable to delete this post."
-      );
-    } finally {
-      setDeletingId("");
-    }
+  const handleDelete = (postId, postTitle) => {
+    setConfirmDialog({
+      title: "Delete this post?",
+      message: `The post "${postTitle}" will be permanently deleted. This action cannot be undone. The post owner will be notified.`,
+      confirmLabel: "Delete post",
+      cancelLabel: "Cancel",
+      tone: "danger",
+      onConfirm: async () => {
+        setDeletingId(postId);
+        setError("");
+        try {
+          await deletePost(postId, token);
+          setPosts((currentPosts) =>
+            currentPosts.filter((post) => post._id !== postId)
+          );
+          setReports((currentReports) =>
+            currentReports.filter((r) => r.post?._id !== postId)
+          );
+        } catch (err) {
+          setError(
+            err.response?.data?.message || "Unable to delete this post."
+          );
+        } finally {
+          setDeletingId("");
+          setConfirmDialog(null);
+        }
+      }
+    });
   };
 
-  const handleReportAction = async (reportId, action) => {
-    try {
-      setReportActionId(reportId);
-      setError("");
+  const handleReportAction = (reportId, action) => {
+    const report = reports.find((r) => r._id === reportId);
+    const postTitle = report?.post?.title || "the reported post";
 
-      if (action === "dismiss") {
-        const res = await updateReportStatus(
-          reportId,
-          { status: "dismissed", adminNote: "Dismissed by admin" },
-          token
-        );
-        setReports((current) =>
-          current.map((r) => (r._id === reportId ? { ...r, ...res.data } : r))
-        );
-      } else if (action === "resolve") {
-        const res = await updateReportStatus(
-          reportId,
-          { status: "resolved", adminNote: "Reviewed by admin" },
-          token
-        );
-        setReports((current) =>
-          current.map((r) => (r._id === reportId ? { ...r, ...res.data } : r))
-        );
-      } else if (action === "delete") {
-        const report = reports.find((r) => r._id === reportId);
-        if (!report?.post?._id) return;
-        const confirmed = window.confirm(
-          `Delete "${report.post.title}"? This will also resolve the report.`
-        );
-        if (!confirmed) {
-          setReportActionId("");
-          return;
+    if (action === "dismiss") {
+      setConfirmDialog({
+        title: "Dismiss this report?",
+        message: `The report on "${postTitle}" will be marked as dismissed. The post will remain visible.`,
+        confirmLabel: "Dismiss report",
+        cancelLabel: "Cancel",
+        tone: "info",
+        onConfirm: async () => {
+          setReportActionId(reportId);
+          setError("");
+          try {
+            const res = await updateReportStatus(
+              reportId,
+              {
+                status: "dismissed",
+                adminNote: `After careful review of the report on "${postTitle}", we determined that the content does not violate our community guidelines. No action has been taken. Thank you for your vigilance in helping keep SkillShare safe.`
+              },
+              token
+            );
+            setReports((current) =>
+              current.map((r) => (r._id === reportId ? { ...r, ...res.data } : r))
+            );
+          } catch (err) {
+            setError(err.response?.data?.message || "Unable to update this report.");
+          } finally {
+            setReportActionId("");
+            setConfirmDialog(null);
+          }
         }
-        await deletePost(report.post._id, token);
-        await updateReportStatus(
-          reportId,
-          { status: "resolved", adminNote: "Post deleted by admin" },
-          token
-        );
-        setPosts((current) =>
-          current.filter((p) => p._id !== report.post._id)
-        );
-        setReports((current) =>
-          current.map((r) =>
-            r._id === reportId
-              ? { ...r, status: "resolved", adminNote: "Post deleted by admin" }
-              : r
-          )
-        );
-      }
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Unable to update this report."
-      );
-    } finally {
-      setReportActionId("");
+      });
+    } else if (action === "delete") {
+      setConfirmDialog({
+        title: "Delete this post?",
+        message: `The post "${postTitle}" will be permanently deleted and the report will be resolved. This action cannot be undone.`,
+        confirmLabel: "Delete post",
+        cancelLabel: "Cancel",
+        tone: "danger",
+        onConfirm: async () => {
+          setReportActionId(reportId);
+          setError("");
+          try {
+            if (!report?.post?._id) return;
+            await deletePost(report.post._id, token);
+            await updateReportStatus(
+              reportId,
+              {
+                status: "resolved",
+                adminNote: `After reviewing the report, we determined that the post violated our community guidelines. The post has been removed from SkillShare. Thank you for helping keep our community safe.`
+              },
+              token
+            );
+            setPosts((current) =>
+              current.filter((p) => p._id !== report.post._id)
+            );
+            setReports((current) =>
+              current.map((r) =>
+                r._id === reportId
+                  ? {
+                      ...r,
+                      status: "resolved",
+                      adminNote: `After reviewing the report, we determined that the post violated our community guidelines. The post has been removed from SkillShare.`
+                    }
+                  : r
+              )
+            );
+          } catch (err) {
+            setError(err.response?.data?.message || "Unable to update this report.");
+          } finally {
+            setReportActionId("");
+            setConfirmDialog(null);
+          }
+        }
+      });
     }
   };
 
@@ -421,6 +446,17 @@ function AdminDashboard() {
       {activeTab === "users" && isSuperAdmin && (
         <UserManagementTab />
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(confirmDialog)}
+        title={confirmDialog?.title || ""}
+        message={confirmDialog?.message || ""}
+        confirmLabel={confirmDialog?.confirmLabel || "Confirm"}
+        cancelLabel={confirmDialog?.cancelLabel || "Cancel"}
+        tone={confirmDialog?.tone || "danger"}
+        onConfirm={confirmDialog?.onConfirm || (() => {})}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </main>
   );
 }

@@ -1,31 +1,46 @@
 import { useState, useEffect } from "react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { FaCompass, FaChartLine, FaEnvelope, FaUser, FaSignOutAlt } from "react-icons/fa";
-import { getDashboard } from "../api";
+import { getDashboard, getUnreadNotificationCount } from "../api";
+import { useNotificationBadge } from "../hooks/useNotificationBadge";
+import NotificationBell from "./NotificationBell";
 
 function NavBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem("token");
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     if (!token) return;
 
     let cancelled = false;
-    const fetchUnread = async () => {
+    const fetchCounts = async () => {
       try {
-        const res = await getDashboard(token);
-        if (!cancelled) setUnreadCount(res.data.unreadMessages || 0);
+        const [dashRes, notifRes] = await Promise.all([
+          getDashboard(token),
+          getUnreadNotificationCount(token)
+        ]);
+        if (!cancelled) {
+          setUnreadMessages(dashRes.data.unreadMessages || 0);
+          setUnreadNotifications(notifRes.data.count || 0);
+        }
       } catch {
       }
     };
-    fetchUnread();
+    fetchCounts();
+
+    const interval = setInterval(fetchCounts, 30000);
 
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, [token, location.pathname]);
+
+  const totalBadge = unreadMessages + unreadNotifications;
+  useNotificationBadge(totalBadge, "SkillShare");
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -52,9 +67,9 @@ function NavBar() {
         <NavLink className="nav-link nav-link-with-badge" to="/messages">
           <FaEnvelope className="nav-icon" aria-hidden="true" />
           <span>Messages</span>
-          {unreadCount > 0 && (
-            <span className="nav-badge" aria-label={`${unreadCount} unread messages`}>
-              {unreadCount > 99 ? "99+" : unreadCount}
+          {unreadMessages > 0 && (
+            <span className="nav-badge" aria-label={`${unreadMessages} unread messages`}>
+              {unreadMessages > 99 ? "99+" : unreadMessages}
             </span>
           )}
         </NavLink>
@@ -64,6 +79,7 @@ function NavBar() {
         </NavLink>
       </div>
       <div className="nav-actions">
+        <NotificationBell />
         <button className="button-ghost button-small" onClick={handleLogout}>
           <FaSignOutAlt className="nav-icon" aria-hidden="true" />
           <span>Log out</span>

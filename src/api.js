@@ -181,3 +181,28 @@ export const unsubscribePush = (token) =>
 
 export const resetPassword = (token, data) =>
   axios.post(`${API_URL}/auth/reset-password/${token}`, data);
+
+export const getMyNotifications = (token) =>
+  axios.get(`${API_URL}/notifications`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getUnreadNotificationCount = (token) =>
+  axios.get(`${API_URL}/notifications/unread/count`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const markNotificationAsRead = (id, token) =>
+  axios.patch(`${API_URL}/notifications/${id}/read`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const markAllNotificationsAsRead = (token) =>
+  axios.patch(`${API_URL}/notifications/read-all`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const deleteNotification = (id, token) =>
+  axios.delete(`${API_URL}/notifications/${id}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });

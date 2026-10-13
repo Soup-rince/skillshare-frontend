@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { FaSearch, FaPaperPlane, FaImage, FaVideo, FaMicrophone, FaPaperclip, FaTimes, FaStop, FaDownload, FaCheck, FaStar } from "react-icons/fa";
 import { getInbox, getConversation, sendMessage, getUserProfile, uploadMedia, getExchangeWith, createExchange, confirmExchange, getMyReviewForUser, createReview } from "../api";
 import ReviewForm from "../components/ReviewForm";
@@ -184,7 +184,6 @@ function Messages() {
         setExchange(exRes.data);
         setMyReview(revRes.data);
       } catch {
-        // silent
       }
     };
     fetchExchangeAndReview();
@@ -424,21 +423,37 @@ function Messages() {
             <p className="message-placeholder">No chats match your search.</p>
           )}
           {filteredInbox.map((conv) => (
-            <button
+            <div
+              role="button"
+              tabIndex={0}
               className={`conversation-item ${activePartner?.id === conv.partnerId ? "active" : ""}`}
               key={conv.partnerId}
               onClick={() => openConversation(conv.partnerId, conv.partnerName)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openConversation(conv.partnerId, conv.partnerName);
+                }
+              }}
             >
-              <span
+              <Link
+                to={`/profile/${conv.partnerId}`}
                 className="conversation-avatar"
                 style={{ background: getAvatarColor(conv.partnerName) }}
-                aria-hidden="true"
+                aria-label={`View ${conv.partnerName}'s profile`}
+                onClick={(e) => e.stopPropagation()}
               >
                 {getInitials(conv.partnerName)}
-              </span>
+              </Link>
               <span className="conversation-body">
                 <span className="conversation-top">
-                  <strong>{conv.partnerName}</strong>
+                  <Link
+                    to={`/profile/${conv.partnerId}`}
+                    className="conversation-name-link"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {conv.partnerName}
+                  </Link>
                   {conv.unreadCount > 0 && (
                     <span className="conversation-badge">
                       {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
@@ -450,7 +465,7 @@ function Messages() {
                   <span className="conversation-time">{formatRelative(conv.lastMessageAt)}</span>
                 </span>
               </span>
-            </button>
+            </div>
           ))}
         </aside>
         <section className="message-panel">
@@ -461,14 +476,20 @@ function Messages() {
           ) : (
             <>
               <header className="message-header">
-                <span
+                <Link
+                  to={`/profile/${activePartner.id}`}
                   className="message-header-avatar"
                   style={{ background: getAvatarColor(activePartner.name) }}
-                  aria-hidden="true"
+                  aria-label={`View ${activePartner.name}'s profile`}
                 >
                   {getInitials(activePartner.name)}
-                </span>
-                <span className="message-header-name">{activePartner.name}</span>
+                </Link>
+                <Link
+                  to={`/profile/${activePartner.id}`}
+                  className="message-header-name"
+                >
+                  {activePartner.name}
+                </Link>
                 <div className="message-header-exchange">
                   {renderExchangeHeader()}
                 </div>
@@ -487,13 +508,14 @@ function Messages() {
                           key={msg._id}
                         >
                           {!mine && (
-                            <span
+                            <Link
+                              to={`/profile/${msg.sender._id}`}
                               className="message-bubble-avatar"
                               style={{ background: getAvatarColor(msg.sender.name) }}
-                              aria-hidden="true"
+                              aria-label={`View ${msg.sender.name}'s profile`}
                             >
                               {getInitials(msg.sender.name)}
-                            </span>
+                            </Link>
                           )}
                           <div className={`message-bubble ${mine ? "mine" : "theirs"}`}>
                             {msg.mediaUrl && msg.mediaType === "image" && (
