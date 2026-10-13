@@ -35,6 +35,8 @@ import {
 import ReviewForm from "../components/ReviewForm";
 import { useConfirm } from "../contexts/ConfirmContext";
 
+const EDIT_WINDOW_MS = 15 * 60 * 1000;
+
 function getInitials(name) {
   if (!name) return "?";
   return name
@@ -237,7 +239,6 @@ function Messages() {
       if (conversationMenuRef.current && !conversationMenuRef.current.contains(e.target)) {
         setShowConversationMenu(false);
       }
-      // Close message 3-dots dropdown if click outside
       if (openMenuId && !e.target.closest(".message-menu-wrapper")) {
         setOpenMenuId(null);
       }
@@ -778,6 +779,10 @@ function Messages() {
                         );
                       }
 
+                      const messageAge = Date.now() - new Date(msg.createdAt).getTime();
+                      const canEdit = messageAge <= EDIT_WINDOW_MS;
+                      const canDelete = true;
+
                       return (
                         <div
                           className={`message-row ${mine ? "mine" : "theirs"}`}
@@ -841,7 +846,6 @@ function Messages() {
                             <span className="message-bubble-time">{formatTime(msg.createdAt)}</span>
                           </div>
 
-                          {/* ===== 3-dots menu for own messages ===== */}
                           {mine && !msg.mediaUrl && (
                             <div className="message-menu-wrapper">
                               <button
@@ -858,19 +862,23 @@ function Messages() {
                               </button>
                               {openMenuId === msg._id && (
                                 <div className="message-menu-dropdown">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleStartEdit(msg)}
-                                  >
-                                    <FaEdit /> <span>Edit</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="message-menu-delete"
-                                    onClick={() => handleDeleteMessage(msg)}
-                                  >
-                                    <FaTrash /> <span>Delete</span>
-                                  </button>
+                                  {canEdit && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartEdit(msg)}
+                                    >
+                                      <FaEdit /> <span>Edit</span>
+                                    </button>
+                                  )}
+                                  {canDelete && (
+                                    <button
+                                      type="button"
+                                      className="message-menu-delete"
+                                      onClick={() => handleDeleteMessage(msg)}
+                                    >
+                                      <FaTrash /> <span>Delete</span>
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>
