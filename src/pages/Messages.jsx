@@ -1,7 +1,33 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { FaSearch, FaPaperPlane, FaImage, FaVideo, FaMicrophone, FaPaperclip, FaTimes, FaStop, FaDownload, FaCheck, FaStar } from "react-icons/fa";
-import { getInbox, getConversation, sendMessage, getUserProfile, uploadMedia, getExchangeWith, createExchange, confirmExchange, getMyReviewForUser, createReview } from "../api";
+import {
+  FaSearch,
+  FaPaperPlane,
+  FaImage,
+  FaVideo,
+  FaMicrophone,
+  FaPaperclip,
+  FaTimes,
+  FaStop,
+  FaDownload,
+  FaCheck,
+  FaStar,
+  FaEllipsisV,
+  FaFileAlt,
+  FaLink
+} from "react-icons/fa";
+import {
+  getInbox,
+  getConversation,
+  sendMessage,
+  getUserProfile,
+  uploadMedia,
+  getExchangeWith,
+  createExchange,
+  confirmExchange,
+  getMyReviewForUser,
+  createReview
+} from "../api";
 import ReviewForm from "../components/ReviewForm";
 
 function getInitials(name) {
@@ -28,6 +54,12 @@ function getAvatarColor(name) {
 function formatTime(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function formatRelative(dateStr) {
@@ -83,6 +115,12 @@ function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function extractUrls(text) {
+  if (!text) return [];
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.match(urlRegex) || [];
+}
+
 function Messages() {
   const [searchParams] = useSearchParams();
   const preselectedId = searchParams.get("to");
@@ -103,6 +141,9 @@ function Messages() {
   const [exchange, setExchange] = useState(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [myReview, setMyReview] = useState(null);
+  const [showConversationMenu, setShowConversationMenu] = useState(false);
+  const [showMediaModal, setShowMediaModal] = useState(false);
+  const [mediaFilter, setMediaFilter] = useState("media");
   const token = localStorage.getItem("token");
   const myId = localStorage.getItem("userId");
   const streamRef = useRef(null);
@@ -112,6 +153,7 @@ function Messages() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
+  const conversationMenuRef = useRef(null);
 
   const loadInbox = async () => {
     const res = await getInbox(token);
@@ -120,6 +162,7 @@ function Messages() {
 
   const openConversation = async (partnerId, partnerName) => {
     setActivePartner({ id: partnerId, name: partnerName });
+    setShowConversationMenu(false);
     const res = await getConversation(partnerId, token);
     setMessages(res.data);
   };
@@ -163,11 +206,25 @@ function Messages() {
       if (e.key === "Escape") {
         setLightboxUrl(null);
         setLightboxType("image");
+        setShowConversationMenu(false);
+        setShowMediaModal(false);
       }
     };
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (conversationMenuRef.current && !conversationMenuRef.current.contains(e.target)) {
+        setShowConversationMenu(false);
+      }
+    };
+    if (showConversationMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showConversationMenu]);
 
   useEffect(() => {
     if (!activePartner) {
@@ -325,6 +382,19 @@ function Messages() {
   }, [inbox, searchQuery]);
 
   const messageGroups = useMemo(() => groupMessagesByDate(messages), [messages]);
+
+  const filteredMedia = useMemo(() => {
+    if (mediaFilter === "media") {
+      return messages.filter((m) => m.mediaType === "image" || m.mediaType === "video");
+    }
+    if (mediaFilter === "files") {
+      return messages.filter((m) => m.mediaType === "file");
+    }
+    if (mediaFilter === "links") {
+      return messages.filter((m) => extractUrls(m.content).length > 0);
+    }
+    return [];
+  }, [messages, mediaFilter]);
 
   const canSend = (content.trim() || pendingFile) && !uploading && !recording;
 
@@ -490,6 +560,52 @@ function Messages() {
                 >
                   {activePartner.name}
                 </Link>
+
+                <div className="message-header-menu-wrapper" ref={conversationMenuRef}>
+                  <button
+                    type="button"
+                    className="message-header-menu-button"
+                    onClick={() => setShowConversationMenu(!showConversationMenu)}
+                    aria-label="Conversation options"
+                  >
+                    <FaEllipsisV />
+                  </button>
+                  {showConversationMenu && (
+                    <div className="message-header-menu-dropdown">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMediaFilter("media");
+                          setShowMediaModal(true);
+                          setShowConversationMenu(false);
+                        }}
+                      >
+                        <FaImage /> <span>View media</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMediaFilter("files");
+                          setShowMediaModal(true);
+                          setShowConversationMenu(false);
+                        }}
+                      >
+                        <FaFileAlt /> <span>View files</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMediaFilter("links");
+                          setShowMediaModal(true);
+                          setShowConversationMenu(false);
+                        }}
+                      >
+                        <FaLink /> <span>View links</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="message-header-exchange">
                   {renderExchangeHeader()}
                 </div>
@@ -702,6 +818,135 @@ function Messages() {
               <FaDownload aria-hidden="true" />
               <span>Download</span>
             </a>
+          </div>
+        </div>
+      )}
+
+      {showMediaModal && (
+        <div className="media-modal-overlay" onClick={() => setShowMediaModal(false)}>
+          <div className="media-modal" onClick={(e) => e.stopPropagation()}>
+            <header className="media-modal-header">
+              <div className="media-modal-tabs">
+                <button
+                  type="button"
+                  className={`media-modal-tab ${mediaFilter === "media" ? "active" : ""}`}
+                  onClick={() => setMediaFilter("media")}
+                >
+                  <FaImage /> Media
+                </button>
+                <button
+                  type="button"
+                  className={`media-modal-tab ${mediaFilter === "files" ? "active" : ""}`}
+                  onClick={() => setMediaFilter("files")}
+                >
+                  <FaFileAlt /> Files
+                </button>
+                <button
+                  type="button"
+                  className={`media-modal-tab ${mediaFilter === "links" ? "active" : ""}`}
+                  onClick={() => setMediaFilter("links")}
+                >
+                  <FaLink /> Links
+                </button>
+              </div>
+              <button
+                type="button"
+                className="media-modal-close"
+                onClick={() => setShowMediaModal(false)}
+                aria-label="Close"
+              >
+                <FaTimes />
+              </button>
+            </header>
+
+            <div className="media-modal-body">
+              {filteredMedia.length === 0 ? (
+                <div className="media-modal-empty">
+                  <FaSearch />
+                  <p>
+                    No {mediaFilter === "media" ? "media" : mediaFilter} found in this conversation.
+                  </p>
+                </div>
+              ) : mediaFilter === "media" ? (
+                <div className="media-grid">
+                  {filteredMedia.map((msg) => (
+                    <button
+                      type="button"
+                      className="media-grid-item"
+                      key={msg._id}
+                      onClick={() => {
+                        setLightboxUrl(msg.mediaUrl);
+                        setLightboxName(msg.mediaName);
+                        setLightboxType(msg.mediaType === "video" ? "video" : "image");
+                        setShowMediaModal(false);
+                      }}
+                    >
+                      {msg.mediaType === "image" ? (
+                        <img src={msg.mediaUrl} alt={msg.mediaName || "image"} />
+                      ) : (
+                        <video src={msg.mediaUrl} />
+                      )}
+                      <span className="media-grid-item-date">
+                        {formatDate(msg.createdAt)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : mediaFilter === "files" ? (
+                <div className="media-list">
+                  {filteredMedia.map((msg) => (
+                    <a
+                      key={msg._id}
+                      href={`${msg.mediaUrl.replace("/upload/", "/upload/fl_attachment/")}?filename=${encodeURIComponent(msg.mediaName || "file")}`}
+                      className="media-list-item"
+                    >
+                      <span className="media-list-icon">
+                        <FaFileAlt />
+                      </span>
+                      <div className="media-list-info">
+                        <strong>{msg.mediaName || "File"}</strong>
+                        <small>
+                          {msg.mediaSize > 0 && formatFileSize(msg.mediaSize)} ·{" "}
+                          {formatDate(msg.createdAt)}
+                        </small>
+                      </div>
+                      <span className="media-list-download">
+                        <FaDownload />
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="media-list">
+                  {filteredMedia.map((msg) => {
+                    const urls = extractUrls(msg.content);
+                    return (
+                      <div key={msg._id} className="media-list-block">
+                        <div className="media-list-block-meta">
+                          <strong>{msg.sender.name}</strong>
+                          <small>{formatDate(msg.createdAt)}</small>
+                        </div>
+                        <p className="media-list-block-message">{msg.content}</p>
+                        <div className="media-list-block-urls">
+                          {urls.map((url, i) => (
+                            <a
+                              key={i}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="media-list-url"
+                            >
+                              <FaLink />
+                              <span>{url}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
