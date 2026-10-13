@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { FaTrash, FaCheck, FaSearch } from "react-icons/fa";
+import { FaTrash, FaCheck, FaSearch, FaHistory } from "react-icons/fa";
 import {
   checkAdmin,
   getSkillPosts,
@@ -8,7 +8,7 @@ import {
   getReports,
   updateReportStatus,
 } from "../api";
-import UserManagementTab from "../components/UserManagementTab";
+import MyActivityTab from "../components/MyActivityTab";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 function AdminDashboard() {
@@ -24,7 +24,6 @@ function AdminDashboard() {
   const [confirmDialog, setConfirmDialog] = useState(null);
 
   const token = localStorage.getItem("token");
-  const isSuperAdmin = localStorage.getItem("role") === "super_admin";
 
   const loadAdminData = async () => {
     await checkAdmin(token);
@@ -223,7 +222,7 @@ function AdminDashboard() {
         </div>
 
         <span className="admin-badge">
-          ● {isSuperAdmin ? "Super admin access" : "Admin access verified"}
+          ● Admin access verified
         </span>
       </header>
 
@@ -256,15 +255,14 @@ function AdminDashboard() {
         >
           Reports {pendingCount > 0 && <span className="admin-tab-badge">{pendingCount}</span>}
         </button>
-        {isSuperAdmin && (
-          <button
-            type="button"
-            className={`admin-tab ${activeTab === "users" ? "active" : ""}`}
-            onClick={() => setActiveTab("users")}
-          >
-            User management
-          </button>
-        )}
+        <button
+          type="button"
+          className={`admin-tab ${activeTab === "activity" ? "active" : ""}`}
+          onClick={() => setActiveTab("activity")}
+        >
+          <FaHistory aria-hidden="true" />
+          <span>My Activity</span>
+        </button>
       </div>
 
       {activeTab === "posts" && (
@@ -443,9 +441,7 @@ function AdminDashboard() {
         </section>
       )}
 
-      {activeTab === "users" && isSuperAdmin && (
-        <UserManagementTab />
-      )}
+      {activeTab === "activity" && <MyActivityTab />}
 
       <ConfirmDialog
         isOpen={Boolean(confirmDialog)}

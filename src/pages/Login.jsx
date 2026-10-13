@@ -13,6 +13,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const successMessage = location.state?.message;
@@ -20,6 +21,7 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setUnverifiedEmail("");
     try {
       const res = await axios.post(`${API_URL}/auth/login`, { email, password });
       localStorage.setItem("token", res.data.token);
@@ -33,8 +35,18 @@ function Login() {
         navigate("/browse");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      const data = err.response?.data;
+      if (data?.code === "EMAIL_NOT_VERIFIED") {
+        setUnverifiedEmail(data.email || email);
+        setError(data.message);
+      } else {
+        setError(data?.message || "Login failed");
+      }
     }
+  };
+
+  const handleEnterCode = () => {
+    navigate("/verify-code", { state: { email: unverifiedEmail } });
   };
 
   return (
@@ -53,7 +65,21 @@ function Login() {
           <p>Enter your details to continue your learning journey.</p>
           <form className="form-stack" onSubmit={handleSubmit}>
             {successMessage && <p className="alert" style={{ background: "#eaf3de", color: "#3b6d11" }}>{successMessage}</p>}
-            {error && <p className="alert">{error}</p>}
+            {error && (
+              <div className="alert">
+                <p style={{ margin: 0 }}>{error}</p>
+                {unverifiedEmail && (
+                  <button
+                    type="button"
+                    className="button-secondary button-small"
+                    onClick={handleEnterCode}
+                    style={{ marginTop: 10, width: "100%" }}
+                  >
+                    Enter verification code
+                  </button>
+                )}
+              </div>
+            )}
             <div className="field">
               <label htmlFor="login-email">Email address</label>
               <input id="login-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />

@@ -6,12 +6,10 @@ const API_URL =
     ? "http://localhost:5000/api"
     : "https://skillshare-backend-1qq5.onrender.com/api");
 
-//Auth
 export const login = (credentials) => axios.post(`${API_URL}/auth/login`, credentials);
 
-//Messages (need token, to pass per request) and every endpoints wrapped with axios call
 export const sendMessage = (data, token) =>
-    axios.post(`${API_URL}/messages`, data, { //API_URL will match the express server PORT
+    axios.post(`${API_URL}/messages`, data, {
         headers: {Authorization: `Bearer ${token}`}
     });
 
@@ -32,7 +30,7 @@ export const uploadMedia = (formData, token) =>
       "Content-Type": "multipart/form-data",
     },
   });
-    
+
 export const getSkillPosts = (params) =>
   axios.get(`${API_URL}/posts`, { params });
 
@@ -78,7 +76,7 @@ export const markWelcomeSeen = (token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const createReview = (data, token) =>
+export const createReview = (data, token) =>
   axios.post(`${API_URL}/reviews`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
@@ -108,12 +106,12 @@ export const getExchangeWith = (userId, token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const getMatches = (token) =>
+export const getMatches = (token) =>
   axios.get(`${API_URL}/match`, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const createReport = (data, token) =>
+export const createReport = (data, token) =>
   axios.post(`${API_URL}/reports`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
@@ -134,28 +132,28 @@ export const getPendingReportCount = (token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const getAllUsers = (params, token) =>
-  axios.get(`${API_URL}/admin/users`, {
+export const getAllUsers = (params, token) =>
+  axios.get(`${API_URL}/superadmin/users`, {
     params,
     headers: { Authorization: `Bearer ${token}` }
   });
 
 export const suspendUser = (id, data, token) =>
-  axios.patch(`${API_URL}/admin/users/${id}/suspend`, data, {
+  axios.patch(`${API_URL}/superadmin/users/${id}/suspend`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
 export const unsuspendUser = (id, token) =>
-  axios.patch(`${API_URL}/admin/users/${id}/unsuspend`, {}, {
+  axios.patch(`${API_URL}/superadmin/users/${id}/unsuspend`, {}, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
 export const changeUserRole = (id, data, token) =>
-  axios.patch(`${API_URL}/admin/users/${id}/role`, data, {
+  axios.patch(`${API_URL}/superadmin/users/${id}/role`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const getVapidPublicKey = () =>
+export const getVapidPublicKey = () =>
   axios.get(`${API_URL}/push/vapid-public-key`);
 
 export const subscribePush = (subscription, token) =>
@@ -168,7 +166,7 @@ export const unsubscribePush = (token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const uploadPostImage = (formData, token) =>
+export const uploadPostImage = (formData, token) =>
   axios.post(`${API_URL}/posts/upload`, formData, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -176,7 +174,7 @@ export const unsubscribePush = (token) =>
     },
   });
 
-  export const forgotPassword = (data) =>
+export const forgotPassword = (data) =>
   axios.post(`${API_URL}/auth/forgot-password`, data);
 
 export const resetPassword = (token, data) =>
@@ -204,5 +202,78 @@ export const markAllNotificationsAsRead = (token) =>
 
 export const deleteNotification = (id, token) =>
   axios.delete(`${API_URL}/notifications/${id}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const editMessage = (id, data, token) =>
+  axios.patch(`${API_URL}/messages/${id}`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const searchUsers = (q = "", page = 1, limit = 12, token) =>
+  axios.get(`${API_URL}/users/search`, {
+    params: { q, page, limit },
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const deleteMessage = (id, token) =>
+  axios.delete(`${API_URL}/messages/${id}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getSuperAdminStats = (token) =>
+  axios.get(`${API_URL}/superadmin/stats`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getAllAdmins = (token) =>
+  axios.get(`${API_URL}/superadmin/admins`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getAllSuperAdmins = (token) =>
+  axios.get(`${API_URL}/superadmin/superadmins`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const promoteToSuperAdmin = (id, token) =>
+  axios.patch(`${API_URL}/superadmin/admins/${id}/promote`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const demoteFromSuperAdmin = (id, token) =>
+  axios.patch(`${API_URL}/superadmin/superadmins/${id}/demote`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const verifyCode = (email, code) =>
+  axios.post(`${API_URL}/auth/verify-code`, { email, code });
+
+export const resendVerification = (email) =>
+  axios.post(`${API_URL}/auth/resend-verification`, { email });
+
+export const getAuditLogs = (params, token) =>
+  axios.get(`${API_URL}/superadmin/audit-logs`, {
+    params,
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const exportAuditLogs = (params, token) =>
+  axios.get(`${API_URL}/superadmin/audit-logs/export`, {
+    params,
+    responseType: "blob",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getMyActivity = (params, token) =>
+  axios.get(`${API_URL}/superadmin/my-activity`, {
+    params,
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const exportMyActivity = (params, token) =>
+  axios.get(`${API_URL}/superadmin/my-activity/export`, {
+    params,
+    responseType: "blob",
     headers: { Authorization: `Bearer ${token}` }
   });

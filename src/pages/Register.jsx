@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const API_URL =
@@ -39,7 +39,7 @@ function Register() {
 
     try {
       await axios.post(`${API_URL}/auth/register`, { name, email, password });
-      navigate("/login", { state: { message: "Registration successful! Please log in." } });
+      navigate("/verify-code", { state: { email } });
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     }

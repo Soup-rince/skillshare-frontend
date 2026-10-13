@@ -1,6 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { FaCompass, FaChartLine, FaEnvelope, FaUser, FaSignOutAlt } from "react-icons/fa";
+import {
+  FaCompass,
+  FaChartLine,
+  FaEnvelope,
+  FaUser,
+  FaSignOutAlt,
+  FaUserCog,
+  FaChevronDown
+} from "react-icons/fa";
 import { getDashboard, getUnreadNotificationCount } from "../api";
 import { useNotificationBadge } from "../hooks/useNotificationBadge";
 import NotificationBell from "./NotificationBell";
@@ -9,8 +17,12 @@ function NavBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem("token");
+  const userId = localStorage.getItem("userId");
+  const userName = localStorage.getItem("userName") || "User";
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     if (!token) return;
@@ -38,6 +50,24 @@ function NavBar() {
       clearInterval(interval);
     };
   }, [token, location.pathname]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
 
   const totalBadge = unreadMessages + unreadNotifications;
   useNotificationBadge(totalBadge, "SkillShare");
@@ -73,17 +103,61 @@ function NavBar() {
             </span>
           )}
         </NavLink>
-        <NavLink className="nav-link" to={`/profile/${localStorage.getItem("userId")}`}>
-          <FaUser className="nav-icon" aria-hidden="true" />
-          <span>Profile</span>
-        </NavLink>
       </div>
       <div className="nav-actions">
         <NotificationBell />
-        <button className="button-ghost button-small" onClick={handleLogout}>
-          <FaSignOutAlt className="nav-icon" aria-hidden="true" />
-          <span>Log out</span>
-        </button>
+        <div className="user-menu-wrapper" ref={menuRef}>
+          <button
+            type="button"
+            className="user-menu-button"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-label="User menu"
+          >
+            <span className="user-menu-icon">
+              {userName.charAt(0).toUpperCase()}
+            </span>
+            <span className="user-menu-name">{userName}</span>
+            <FaChevronDown className="user-menu-chevron" aria-hidden="true" />
+          </button>
+
+          {menuOpen && (
+            <div className="user-menu-dropdown" role="menu">
+              <NavLink
+                className="user-menu-item"
+                to={`/profile/${userId}`}
+                onClick={() => setMenuOpen(false)}
+                role="menuitem"
+              >
+                <FaUser className="user-menu-item-icon" aria-hidden="true" />
+                <span>View profile</span>
+              </NavLink>
+
+              <NavLink
+                className="user-menu-item"
+                to="/profile/edit"
+                onClick={() => setMenuOpen(false)}
+                role="menuitem"
+              >
+                <FaUserCog className="user-menu-item-icon" aria-hidden="true" />
+                <span>Edit profile</span>
+              </NavLink>
+
+              <div className="user-menu-divider" />
+
+              <button
+                type="button"
+                className="user-menu-item user-menu-item-logout"
+                onClick={handleLogout}
+                role="menuitem"
+              >
+                <FaSignOutAlt className="user-menu-item-icon" aria-hidden="true" />
+                <span>Log out</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );

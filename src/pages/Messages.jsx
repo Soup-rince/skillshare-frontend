@@ -14,7 +14,9 @@ import {
   FaStar,
   FaEllipsisV,
   FaFileAlt,
-  FaLink
+  FaLink,
+  FaEdit,
+  FaTrash
 } from "react-icons/fa";
 import {
   getInbox,
@@ -26,9 +28,12 @@ import {
   createExchange,
   confirmExchange,
   getMyReviewForUser,
-  createReview
+  createReview,
+  editMessage,
+  deleteMessage
 } from "../api";
 import ReviewForm from "../components/ReviewForm";
+import { useConfirm } from "../contexts/ConfirmContext";
 
 function getInitials(name) {
   if (!name) return "?";
@@ -144,6 +149,11 @@ function Messages() {
   const [showConversationMenu, setShowConversationMenu] = useState(false);
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [mediaFilter, setMediaFilter] = useState("media");
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
   const token = localStorage.getItem("token");
   const myId = localStorage.getItem("userId");
   const streamRef = useRef(null);
@@ -154,6 +164,8 @@ function Messages() {
   const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
   const conversationMenuRef = useRef(null);
+  const editInputRef = useRef(null);
+  const confirm = useConfirm();
 
   const loadInbox = async () => {
     const res = await getInbox(token);
@@ -163,6 +175,9 @@ function Messages() {
   const openConversation = async (partnerId, partnerName) => {
     setActivePartner({ id: partnerId, name: partnerName });
     setShowConversationMenu(false);
+    setEditingMessageId(null);
+    setEditingContent("");
+    setOpenMenuId(null);
     const res = await getConversation(partnerId, token);
     setMessages(res.data);
   };
@@ -208,6 +223,9 @@ function Messages() {
         setLightboxType("image");
         setShowConversationMenu(false);
         setShowMediaModal(false);
+        setEditingMessageId(null);
+        setEditingContent("");
+        setOpenMenuId(null);
       }
     };
     window.addEventListener("keydown", handleEsc);
@@ -219,12 +237,21 @@ function Messages() {
       if (conversationMenuRef.current && !conversationMenuRef.current.contains(e.target)) {
         setShowConversationMenu(false);
       }
+      // Close message 3-dots dropdown if click outside
+      if (openMenuId && !e.target.closest(".message-menu-wrapper")) {
+        setOpenMenuId(null);
+      }
     };
-    if (showConversationMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showConversationMenu]);
+  }, [showConversationMenu, openMenuId]);
+
+  useEffect(() => {
+    if (editingMessageId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.setSelectionRange(editInputRef.current.value.length, editInputRef.current.value.length);
+    }
+  }, [editingMessageId]);
 
   useEffect(() => {
     if (!activePartner) {
@@ -334,6 +361,64 @@ function Messages() {
     }
   };
 
+  const handleStartEdit = (msg) => {
+    setEditingMessageId(msg._id);
+    setEditingContent(msg.content || "");
+    setOpenMenuId(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingContent("");
+  };
+
+  const handleSaveEdit = async (msgId) => {
+    if (!editingContent.trim()) {
+      setError("Message cannot be empty.");
+      return;
+    }
+    try {
+      setSavingEdit(true);
+      setError("");
+      const res = await editMessage(msgId, { content: editingContent.trim() }, token);
+      setMessages((current) =>
+        current.map((m) => (m._id === msgId ? res.data : m))
+      );
+      setEditingMessageId(null);
+      setEditingContent("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not edit message.");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteMessage = async (msg) => {
+    setOpenMenuId(null);
+    const ok = await confirm({
+      title: "Delete message?",
+      message: "This message will be removed for everyone in this conversation. This action cannot be undone.",
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      tone: "danger",
+    });
+    if (!ok) return;
+
+    try {
+      setDeletingId(msg._id);
+      setError("");
+      const res = await deleteMessage(msg._id, token);
+      setMessages((current) =>
+        current.map((m) => (m._id === msg._id ? res.data : m))
+      );
+      await loadInbox();
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not delete message.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!activePartner) return;
@@ -385,13 +470,13 @@ function Messages() {
 
   const filteredMedia = useMemo(() => {
     if (mediaFilter === "media") {
-      return messages.filter((m) => m.mediaType === "image" || m.mediaType === "video");
+      return messages.filter((m) => !m.deleted && (m.mediaType === "image" || m.mediaType === "video"));
     }
     if (mediaFilter === "files") {
-      return messages.filter((m) => m.mediaType === "file");
+      return messages.filter((m) => !m.deleted && m.mediaType === "file");
     }
     if (mediaFilter === "links") {
-      return messages.filter((m) => extractUrls(m.content).length > 0);
+      return messages.filter((m) => !m.deleted && extractUrls(m.content).length > 0);
     }
     return [];
   }, [messages, mediaFilter]);
@@ -618,6 +703,81 @@ function Messages() {
                     </div>
                     {group.messages.map((msg) => {
                       const mine = msg.sender._id === myId;
+                      const isEditing = editingMessageId === msg._id;
+
+                      if (isEditing) {
+                        return (
+                          <div
+                            className={`message-row ${mine ? "mine" : "theirs"}`}
+                            key={msg._id}
+                          >
+                            <div className="message-bubble message-bubble-editing">
+                              <input
+                                ref={editInputRef}
+                                type="text"
+                                className="message-edit-input"
+                                value={editingContent}
+                                onChange={(e) => setEditingContent(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleSaveEdit(msg._id);
+                                  }
+                                  if (e.key === "Escape") {
+                                    handleCancelEdit();
+                                  }
+                                }}
+                                disabled={savingEdit}
+                              />
+                              <div className="message-edit-actions">
+                                <button
+                                  type="button"
+                                  className="message-edit-cancel"
+                                  onClick={handleCancelEdit}
+                                  disabled={savingEdit}
+                                >
+                                  <FaTimes />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="message-edit-save"
+                                  onClick={() => handleSaveEdit(msg._id)}
+                                  disabled={savingEdit || !editingContent.trim()}
+                                >
+                                  <FaCheck />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (msg.deleted) {
+                        return (
+                          <div
+                            className={`message-row ${mine ? "mine" : "theirs"}`}
+                            key={msg._id}
+                          >
+                            {!mine && (
+                              <Link
+                                to={`/profile/${msg.sender._id}`}
+                                className="message-bubble-avatar"
+                                style={{ background: getAvatarColor(msg.sender.name) }}
+                                aria-label={`View ${msg.sender.name}'s profile`}
+                              >
+                                {getInitials(msg.sender.name)}
+                              </Link>
+                            )}
+                            <div className={`message-bubble message-bubble-deleted ${mine ? "mine" : "theirs"}`}>
+                              <span className="message-bubble-content">
+                                <em>This message was deleted</em>
+                              </span>
+                              <span className="message-bubble-time">{formatTime(msg.createdAt)}</span>
+                            </div>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div
                           className={`message-row ${mine ? "mine" : "theirs"}`}
@@ -673,10 +833,48 @@ function Messages() {
                               </a>
                             )}
                             {msg.content && (
-                              <span className="message-bubble-content">{msg.content}</span>
+                              <span className="message-bubble-content">
+                                {msg.content}
+                                {msg.edited && <span className="message-edited-label">(edited)</span>}
+                              </span>
                             )}
                             <span className="message-bubble-time">{formatTime(msg.createdAt)}</span>
                           </div>
+
+                          {/* ===== 3-dots menu for own messages ===== */}
+                          {mine && !msg.mediaUrl && (
+                            <div className="message-menu-wrapper">
+                              <button
+                                type="button"
+                                className="message-menu-button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(openMenuId === msg._id ? null : msg._id);
+                                }}
+                                aria-label="Message options"
+                                disabled={deletingId === msg._id}
+                              >
+                                <FaEllipsisV />
+                              </button>
+                              {openMenuId === msg._id && (
+                                <div className="message-menu-dropdown">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEdit(msg)}
+                                  >
+                                    <FaEdit /> <span>Edit</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="message-menu-delete"
+                                    onClick={() => handleDeleteMessage(msg)}
+                                  >
+                                    <FaTrash /> <span>Delete</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

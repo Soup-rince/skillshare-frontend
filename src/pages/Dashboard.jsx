@@ -1,19 +1,85 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { FaFileAlt, FaEnvelope, FaBolt, FaPlusCircle, FaBell, FaStar } from "react-icons/fa";
-import { getDashboard, getUserReviews } from "../api";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  FaFileAlt,
+  FaEnvelope,
+  FaBolt,
+  FaPlusCircle,
+  FaBell,
+  FaStar,
+  FaBan,
+  FaTrash,
+  FaFlag,
+  FaCheck,
+  FaShieldAlt,
+  FaUser
+} from "react-icons/fa";
+import {
+  getDashboard,
+  getUserReviews,
+  getMyNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead
+} from "../api";
+import NotificationDetailModal from "../components/NotificationDetailModal";
 import {
   registerServiceWorker,
   requestPushPermission,
   getPushPermissionStatus
 } from "../utils/pushNotifications";
 
+const ICON_MAP = {
+  bell: FaBell,
+  envelope: FaEnvelope,
+  star: FaStar,
+  ban: FaBan,
+  trash: FaTrash,
+  flag: FaFlag,
+  check: FaCheck,
+  shield: FaShieldAlt,
+  user: FaUser
+};
+
+const TYPE_COLORS = {
+  post_deleted: "#dc2626",
+  new_message: "#2639ba",
+  new_review: "#f59e0b",
+  suspended: "#dc2626",
+  report_resolved: "#166534",
+  exchange_completed: "#168565",
+  promoted: "#168565",
+  demoted: "#a16207",
+  post_reported: "#ad2438"
+};
+
+function formatRelativeTime(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHour = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function Dashboard() {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [reviewsData, setReviewsData] = useState({ total: 0, average: 0 });
   const [error, setError] = useState("");
   const [pushStatus, setPushStatus] = useState("default");
   const [pushLoading, setPushLoading] = useState(false);
+
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [selectedNotification, setSelectedNotification] = useState(null);
+
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || "there";
@@ -54,6 +120,23 @@ function Dashboard() {
     init();
   }, []);
 
+  // Fetch recent notifications (5 lang)
+  useEffect(() => {
+    if (!token) return;
+    const fetchNotifications = async () => {
+      try {
+        setNotificationsLoading(true);
+        const res = await getMyNotifications(token);
+        setNotifications((res.data || []).slice(0, 5));
+      } catch {
+        setNotifications([]);
+      } finally {
+        setNotificationsLoading(false);
+      }
+    };
+    fetchNotifications();
+  }, [token]);
+
   const handleEnablePush = async () => {
     try {
       setPushLoading(true);
@@ -65,6 +148,34 @@ function Dashboard() {
       setPushLoading(false);
     }
   };
+
+  const handleNotificationClick = async (notification) => {
+    try {
+      if (!notification.read) {
+        await markNotificationAsRead(notification._id, token);
+        setNotifications((current) =>
+          current.map((n) => (n._id === notification._id ? { ...n, read: true } : n))
+        );
+      }
+
+      if (notification.type === "new_message") {
+        if (notification.link) navigate(notification.link);
+      } else {
+        setSelectedNotification({ ...notification, read: true });
+      }
+    } catch {
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsAsRead(token);
+      setNotifications((current) => current.map((n) => ({ ...n, read: true })));
+    } catch {
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   if (error) return <main className="page-container"><p className="alert">{error}</p></main>;
   if (!data) return <main className="page-container"><div className="empty-state"><p>Loading your dashboard...</p></div></main>;
@@ -132,6 +243,79 @@ function Dashboard() {
         </div>
       </section>
 
+      {/* ===== RECENT NOTIFICATIONS ===== */}
+      <section className="dashboard-notifications">
+        <div className="dashboard-notifications-header">
+          <h2 className="section-title" style={{ margin: 0 }}>
+            <FaBell aria-hidden="true" />
+            <span>Recent notifications</span>
+            {unreadCount > 0 && (
+              <span className="dashboard-notifications-badge">
+                {unreadCount}
+              </span>
+            )}
+          </h2>
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              className="notification-mark-all"
+              onClick={handleMarkAllRead}
+            >
+              Mark all as read
+            </button>
+          )}
+        </div>
+
+        {notificationsLoading ? (
+          <div className="empty-state">
+            <p>Loading notifications...</p>
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="empty-state">
+            <span className="empty-state-icon" aria-hidden="true"><FaBell /></span>
+            <h2>No notifications yet</h2>
+            <p>You will see updates about your posts, messages, and exchanges here.</p>
+          </div>
+        ) : (
+          <div className="dashboard-notifications-list">
+            {notifications.map((notif) => {
+              const IconComponent = ICON_MAP[notif.icon] || FaBell;
+              const color = TYPE_COLORS[notif.type] || "#66708a";
+              return (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  key={notif._id}
+                  className={`notification-item ${notif.read ? "read" : "unread"}`}
+                  onClick={() => handleNotificationClick(notif)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleNotificationClick(notif);
+                    }
+                  }}
+                >
+                  <span
+                    className="notification-item-icon"
+                    style={{ background: `${color}15`, color }}
+                  >
+                    <IconComponent />
+                  </span>
+                  <div className="notification-item-body">
+                    <strong>{notif.title}</strong>
+                    {notif.message && <p>{notif.message}</p>}
+                    <span className="notification-item-time">
+                      {formatRelativeTime(notif.createdAt)}
+                    </span>
+                  </div>
+                  {!notif.read && <span className="notification-unread-dot" />}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       <h2 className="section-title">Your skill posts</h2>
       {data.myPosts.length === 0 ? (
         <div className="empty-state">
@@ -176,6 +360,12 @@ function Dashboard() {
           ))}
         </div>
       )}
+
+      <NotificationDetailModal
+        notification={selectedNotification}
+        onClose={() => setSelectedNotification(null)}
+        onNavigate={(link) => navigate(link)}
+      />
     </main>
   );
 }

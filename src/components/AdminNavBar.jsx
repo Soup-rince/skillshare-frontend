@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   FaCompass,
@@ -6,7 +6,9 @@ import {
   FaEnvelope,
   FaUser,
   FaSignOutAlt,
-  FaShieldAlt
+  FaShieldAlt,
+  FaUserCog,
+  FaChevronDown
 } from "react-icons/fa";
 import { getDashboard, getPendingReportCount, getUnreadNotificationCount } from "../api";
 import { useNotificationBadge } from "../hooks/useNotificationBadge";
@@ -16,10 +18,13 @@ function AdminNavBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const userId = localStorage.getItem("userId");
+  const userName = localStorage.getItem("userName") || "Admin";
   const token = localStorage.getItem("token");
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingReports, setPendingReports] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     if (!token) return;
@@ -50,6 +55,24 @@ function AdminNavBar() {
       clearInterval(interval);
     };
   }, [token, location.pathname]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
 
   const totalBadge = unreadMessages + pendingReports + unreadNotifications;
   useNotificationBadge(totalBadge, "SkillShare Admin");
@@ -89,10 +112,6 @@ function AdminNavBar() {
             <span className="nav-badge">{unreadMessages > 99 ? "99+" : unreadMessages}</span>
           )}
         </NavLink>
-        <NavLink className="admin-nav-link" to={`/profile/${userId}`}>
-          <FaUser className="admin-nav-icon" aria-hidden="true" />
-          <span>Profile</span>
-        </NavLink>
         <NavLink className="admin-nav-link admin-panel-link" to="/admin">
           <FaShieldAlt className="admin-nav-icon" aria-hidden="true" />
           <span>Admin panel</span>
@@ -104,10 +123,58 @@ function AdminNavBar() {
 
       <div className="admin-nav-actions">
         <NotificationBell />
-        <button className="admin-logout" type="button" onClick={handleLogout}>
-          <FaSignOutAlt className="admin-nav-icon" aria-hidden="true" />
-          <span>Log out</span>
-        </button>
+        <div className="admin-user-menu-wrapper" ref={menuRef}>
+          <button
+            type="button"
+            className="admin-user-menu-button"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-label="User menu"
+          >
+            <span className="admin-user-menu-icon">
+              {userName.charAt(0).toUpperCase()}
+            </span>
+            <span className="admin-user-menu-name">{userName}</span>
+            <FaChevronDown className="admin-user-menu-chevron" aria-hidden="true" />
+          </button>
+
+          {menuOpen && (
+            <div className="admin-user-menu-dropdown" role="menu">
+              <NavLink
+                className="admin-user-menu-item"
+                to={`/profile/${userId}`}
+                onClick={() => setMenuOpen(false)}
+                role="menuitem"
+              >
+                <FaUser className="admin-user-menu-item-icon" aria-hidden="true" />
+                <span>View profile</span>
+              </NavLink>
+
+              <NavLink
+                className="admin-user-menu-item"
+                to="/profile/edit"
+                onClick={() => setMenuOpen(false)}
+                role="menuitem"
+              >
+                <FaUserCog className="admin-user-menu-item-icon" aria-hidden="true" />
+                <span>Edit profile</span>
+              </NavLink>
+
+              <div className="admin-user-menu-divider" />
+
+              <button
+                type="button"
+                className="admin-user-menu-item admin-user-menu-item-logout"
+                onClick={handleLogout}
+                role="menuitem"
+              >
+                <FaSignOutAlt className="admin-user-menu-item-icon" aria-hidden="true" />
+                <span>Log out</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );
