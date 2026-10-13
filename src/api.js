@@ -277,3 +277,38 @@ export const exportMyActivity = (params, token) =>
     responseType: "blob",
     headers: { Authorization: `Bearer ${token}` }
   });
+
+  export const getActiveAnnouncement = (token) =>
+  axios.get(`${API_URL}/announcements/active`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const dismissAnnouncement = (id, token) =>
+  axios.post(`${API_URL}/announcements/${id}/dismiss`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getAllAnnouncements = (token) =>
+  axios.get(`${API_URL}/announcements/all`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const createAnnouncement = (data, token) =>
+  axios.post(`${API_URL}/announcements`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const updateAnnouncement = (id, data, token) =>
+  axios.patch(`${API_URL}/announcements/${id}`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const toggleAnnouncement = (id, token) =>
+  axios.patch(`${API_URL}/announcements/${id}/toggle`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const deleteAnnouncement = (id, token) =>
+  axios.delete(`${API_URL}/announcements/${id}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });

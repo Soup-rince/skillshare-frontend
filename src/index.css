@@ -6659,3 +6659,351 @@ a.message-header-name:hover {
     font-size: 0.82rem;
   }
 }
+
+/* ============ ANNOUNCEMENT BANNER ============ */
+
+.announcement-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 1px solid;
+  position: sticky;
+  top: 0;
+  z-index: 11;
+}
+
+.announcement-banner-info {
+  color: #2639ba;
+  background: #eef0ff;
+  border-bottom-color: #d9deff;
+}
+
+.announcement-banner-warning {
+  color: #a16207;
+  background: #fef9c3;
+  border-bottom-color: #fde68a;
+}
+
+.announcement-banner-critical {
+  color: #ad2438;
+  background: #fff2f4;
+  border-bottom-color: #ffd7dc;
+}
+
+.announcement-banner-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
+}
+
+.announcement-banner-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.announcement-banner-title {
+  display: block;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.announcement-banner-message {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.announcement-banner-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 50%;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 0.82rem;
+  transition: background 0.18s;
+}
+
+.announcement-banner-close:hover {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.announcement-banner-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .announcement-banner {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .announcement-banner-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 0.82rem;
+  }
+  .announcement-banner-title {
+    font-size: 0.85rem;
+  }
+  .announcement-banner-message {
+    font-size: 0.78rem;
+  }
+}
+
+/* ============ ANNOUNCEMENT FORM (Super Admin) ============ */
+
+.announcement-form {
+  padding: 22px;
+  margin-bottom: 22px;
+  border: 1px solid #e5e9f4;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(32, 54, 113, 0.045);
+}
+
+.announcement-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eef0f6;
+}
+
+.announcement-form-header h3 {
+  margin: 0;
+  color: #152049;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.announcement-form-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  color: #66708a;
+  background: #f6f7fb;
+  cursor: pointer;
+  font-size: 0.82rem;
+  transition: background 0.18s, color 0.18s;
+}
+
+.announcement-form-close:hover {
+  background: #eef0ff;
+  color: #2639ba;
+}
+
+.field-checkbox {
+  padding: 12px 14px;
+  border: 1px solid #eef0f6;
+  border-radius: 10px;
+  background: #fafbff;
+}
+
+.field-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #253150;
+}
+
+.field-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #2639ba;
+  cursor: pointer;
+}
+
+/* ============ ANNOUNCEMENT LIST (Super Admin) ============ */
+
+.announcement-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 21px;
+  border-bottom: 1px solid #edf4f1;
+}
+
+.announcement-row:last-child {
+  border-bottom: 0;
+}
+
+.announcement-row:hover {
+  background: #fbfefd;
+}
+
+.announcement-row-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-radius: 11px;
+  font-size: 1rem;
+}
+
+.announcement-row-icon-info {
+  color: #2639ba;
+  background: #eef0ff;
+}
+
+.announcement-row-icon-warning {
+  color: #a16207;
+  background: #fef9c3;
+}
+
+.announcement-row-icon-critical {
+  color: #ad2438;
+  background: #fff2f4;
+}
+
+.announcement-row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.announcement-row-headline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.announcement-row-headline h3 {
+  margin: 0;
+  color: #172247;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.announcement-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.announcement-type-info {
+  color: #2639ba;
+  background: #eef0ff;
+}
+
+.announcement-type-warning {
+  color: #a16207;
+  background: #fef9c3;
+}
+
+.announcement-type-critical {
+  color: #ad2438;
+  background: #fff2f4;
+}
+
+.announcement-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.announcement-status-inactive {
+  color: #6b7280;
+  background: #f3f4f6;
+}
+
+.announcement-status-expired {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.announcement-status-pinned {
+  color: #5b21b6;
+  background: #f3e8ff;
+}
+
+.announcement-row-message {
+  margin: 0 0 10px;
+  color: #59647f;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.announcement-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: #8992a8;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.announcement-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+
+.announcement-row-actions .button-secondary,
+.announcement-row-actions .button-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 11px;
+  font-size: 0.78rem;
+}
+
+.announcement-row-actions svg {
+  font-size: 0.72rem;
+}
+
+@media (max-width: 800px) {
+  .announcement-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .announcement-row-actions {
+    width: 100%;
+  }
+  .announcement-row-actions .button-secondary,
+  .announcement-row-actions .button-danger {
+    flex: 1;
+    justify-content: center;
+  }
+}
+

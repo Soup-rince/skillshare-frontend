@@ -16,6 +16,7 @@ import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SuperAdminNavBar from "./components/SuperAdminNavBar";
 import GettingStarted from "./pages/GettingStarted";
 import OfflineBanner from "./components/OfflineBanner";
+import AnnouncementBanner from "./components/AnnouncementBanner";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyCode from "./pages/VerifyCode";
@@ -40,6 +41,7 @@ function AppContent() {
   return (
     <div className="app-shell">
       <OfflineBanner />
+      {!isAuthPage && <AnnouncementBanner />}
       {!isAuthPage && token && renderNavBar()}
       <Routes>
         <Route path="/login" element={token ? <Navigate to="/browse" replace /> : <Login />} />

@@ -8,7 +8,8 @@ import {
   FaFlag,
   FaBan,
   FaSearch,
-  FaHistory
+  FaHistory,
+  FaBullhorn
 } from "react-icons/fa";
 import {
   checkAdmin,
@@ -19,6 +20,7 @@ import {
 import AdminManagementTab from "../components/AdminManagementTab";
 import UserManagementTab from "../components/UserManagementTab";
 import AuditLogTab from "../components/AuditLogTab";
+import AnnouncementsTab from "../components/AnnouncementsTab";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 function getInitials(name) {
@@ -146,7 +148,7 @@ function SuperAdminDashboard() {
         <div>
           <p className="eyebrow superadmin-eyebrow">System control</p>
           <h1>Super Admin Dashboard</h1>
-          <p>Full system privileges — manage users, admins, super admins, and audit logs.</p>
+          <p>Full system privileges — manage users, admins, super admins, audit logs, and announcements.</p>
         </div>
 
         <span className="superadmin-badge">
@@ -217,6 +219,14 @@ function SuperAdminDashboard() {
         >
           <FaHistory aria-hidden="true" />
           <span>Audit Log</span>
+        </button>
+        <button
+          type="button"
+          className={`superadmin-tab ${activeTab === "announcements" ? "active" : ""}`}
+          onClick={() => setActiveTab("announcements")}
+        >
+          <FaBullhorn aria-hidden="true" />
+          <span>Announcements</span>
         </button>
       </div>
 
@@ -308,6 +318,8 @@ function SuperAdminDashboard() {
       )}
 
       {activeTab === "audit" && <AuditLogTab />}
+
+      {activeTab === "announcements" && <AnnouncementsTab />}
 
       <ConfirmDialog
         isOpen={Boolean(confirmDialog)}
