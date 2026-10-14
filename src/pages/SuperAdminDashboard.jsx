@@ -9,7 +9,8 @@ import {
   FaBan,
   FaSearch,
   FaHistory,
-  FaBullhorn
+  FaBullhorn,
+  FaUserTie
 } from "react-icons/fa";
 import {
   checkAdmin,
@@ -18,6 +19,7 @@ import {
   demoteFromSuperAdmin
 } from "../api";
 import AdminManagementTab from "../components/AdminManagementTab";
+import ModeratorManagementTab from "../components/ModeratorManagementTab";
 import UserManagementTab from "../components/UserManagementTab";
 import AuditLogTab from "../components/AuditLogTab";
 import AnnouncementsTab from "../components/AnnouncementsTab";
@@ -148,7 +150,7 @@ function SuperAdminDashboard() {
         <div>
           <p className="eyebrow superadmin-eyebrow">System control</p>
           <h1>Super Admin Dashboard</h1>
-          <p>Full system privileges — manage users, admins, super admins, audit logs, and announcements.</p>
+          <p>Full system privileges — manage users, moderators, admins, super admins, audit logs, and announcements.</p>
         </div>
 
         <span className="superadmin-badge">
@@ -164,6 +166,11 @@ function SuperAdminDashboard() {
             <FaUsers className="superadmin-summary-icon" />
             <span>Total users</span>
             <strong>{stats.totalUsers}</strong>
+          </div>
+          <div>
+            <FaUserTie className="superadmin-summary-icon" />
+            <span>Moderators</span>
+            <strong>{stats.totalModerators || 0}</strong>
           </div>
           <div>
             <FaUserShield className="superadmin-summary-icon" />
@@ -200,6 +207,14 @@ function SuperAdminDashboard() {
         </button>
         <button
           type="button"
+          className={`superadmin-tab ${activeTab === "moderators" ? "active" : ""}`}
+          onClick={() => setActiveTab("moderators")}
+        >
+          <FaUserTie aria-hidden="true" />
+          <span>Moderators</span>
+        </button>
+        <button
+          type="button"
           className={`superadmin-tab ${activeTab === "admins" ? "active" : ""}`}
           onClick={() => setActiveTab("admins")}
         >
@@ -231,6 +246,8 @@ function SuperAdminDashboard() {
       </div>
 
       {activeTab === "users" && <UserManagementTab />}
+
+      {activeTab === "moderators" && <ModeratorManagementTab />}
 
       {activeTab === "admins" && <AdminManagementTab />}
 

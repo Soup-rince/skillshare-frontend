@@ -66,6 +66,11 @@ export const checkAdmin = (token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
+export const checkModerator = (token) =>
+  axios.get(`${API_URL}/moderator/check`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
 export const updateProfile = (data, token) =>
   axios.patch(`${API_URL}/users/me/update`, data, {
     headers: { Authorization: `Bearer ${token}` }
@@ -133,23 +138,23 @@ export const getPendingReportCount = (token) =>
   });
 
 export const getAllUsers = (params, token) =>
-  axios.get(`${API_URL}/superadmin/users`, {
+  axios.get(`${API_URL}/admin/users`, {
     params,
     headers: { Authorization: `Bearer ${token}` }
   });
 
 export const suspendUser = (id, data, token) =>
-  axios.patch(`${API_URL}/superadmin/users/${id}/suspend`, data, {
+  axios.patch(`${API_URL}/admin/users/${id}/suspend`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
 export const unsuspendUser = (id, token) =>
-  axios.patch(`${API_URL}/superadmin/users/${id}/unsuspend`, {}, {
+  axios.patch(`${API_URL}/admin/users/${id}/unsuspend`, {}, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
 export const changeUserRole = (id, data, token) =>
-  axios.patch(`${API_URL}/superadmin/users/${id}/role`, data, {
+  axios.patch(`${API_URL}/admin/users/${id}/role`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
@@ -278,7 +283,7 @@ export const exportMyActivity = (params, token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const getActiveAnnouncement = (token) =>
+export const getActiveAnnouncement = (token) =>
   axios.get(`${API_URL}/announcements/active`, {
     headers: { Authorization: `Bearer ${token}` }
   });
@@ -310,5 +315,47 @@ export const toggleAnnouncement = (id, token) =>
 
 export const deleteAnnouncement = (id, token) =>
   axios.delete(`${API_URL}/announcements/${id}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  export const getModeratorReports = (params, token) =>
+  axios.get(`${API_URL}/moderator/reports`, {
+    params,
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const updateModeratorReportStatus = (id, data, token) =>
+  axios.patch(`${API_URL}/moderator/reports/${id}`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  export const getModeratorMyActivity = (params, token) =>
+  axios.get(`${API_URL}/moderator/my-activity`, {
+    params,
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const exportModeratorMyActivity = (params, token) =>
+  axios.get(`${API_URL}/moderator/my-activity/export`, {
+    params,
+    responseType: "blob",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  export const getAllModerators = (token) =>
+  axios.get(`${API_URL}/superadmin/moderators`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  export const getAdminAuditLogs = (params, token) =>
+  axios.get(`${API_URL}/superadmin/admin-audit-logs`, {
+    params,
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const exportAdminAuditLogs = (params, token) =>
+  axios.get(`${API_URL}/superadmin/admin-audit-logs/export`, {
+    params,
+    responseType: "blob",
     headers: { Authorization: `Bearer ${token}` }
   });

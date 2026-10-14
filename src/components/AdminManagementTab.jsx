@@ -4,7 +4,7 @@ import {
   FaSearch,
   FaUserShield,
   FaCrown,
-  FaUser,
+  FaUserTie,
   FaBan
 } from "react-icons/fa";
 import {
@@ -89,16 +89,16 @@ function AdminManagementTab() {
     });
   };
 
-  const handleDemoteToMember = (user) => {
+  const handleDemoteToModerator = (user) => {
     setConfirmDialog({
-      title: "Demote to Member",
-      message: `Demote ${user.name} to Member? They will lose all admin privileges.`,
+      title: "Demote to Moderator",
+      message: `Demote ${user.name} to Moderator? They will lose user management privileges but retain content moderation access.`,
       confirmLabel: "Demote",
       tone: "danger",
       onConfirm: async () => {
         setActionId(user._id);
         try {
-          await changeUserRole(user._id, { role: "member" }, token);
+          await changeUserRole(user._id, { role: "moderator" }, token);
           await loadAdmins();
         } catch (err) {
           setError(err.response?.data?.message || "Could not demote user.");
@@ -199,11 +199,11 @@ function AdminManagementTab() {
                     <button
                       className="button-danger"
                       type="button"
-                      onClick={() => handleDemoteToMember(user)}
+                      onClick={() => handleDemoteToModerator(user)}
                       disabled={actionId === user._id}
                     >
-                      <FaUser aria-hidden="true" />
-                      <span>Demote to Member</span>
+                      <FaUserTie aria-hidden="true" />
+                      <span>Demote to Moderator</span>
                     </button>
                   </div>
                 )}

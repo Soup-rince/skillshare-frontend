@@ -9,7 +9,7 @@ import {
   FaKey,
   FaTimesCircle
 } from "react-icons/fa";
-import { getMyActivity, exportMyActivity } from "../api";
+import { getModeratorMyActivity, exportModeratorMyActivity } from "../api";
 
 const ACTION_ICONS = {
   delete_post: FaTrash,
@@ -74,7 +74,7 @@ function groupLogsByDate(logs) {
   return groups;
 }
 
-function MyActivityTab() {
+function ModeratorActivityTab() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -91,7 +91,7 @@ function MyActivityTab() {
       const params = {};
       if (fromDate) params.from = fromDate;
       if (toDate) params.to = toDate;
-      const res = await getMyActivity(params, token);
+      const res = await getModeratorMyActivity(params, token);
       setLogs(res.data);
     } catch (err) {
       setError(err.response?.data?.message || "Could not load your activity.");
@@ -123,7 +123,7 @@ function MyActivityTab() {
       const params = {};
       if (fromDate) params.from = fromDate;
       if (toDate) params.to = toDate;
-      const res = await exportMyActivity(params, token);
+      const res = await exportModeratorMyActivity(params, token);
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -156,18 +156,18 @@ function MyActivityTab() {
 
       <div className="audit-filters">
         <div className="audit-date-group">
-          <label htmlFor="activity-from">From</label>
+          <label htmlFor="mod-activity-from">From</label>
           <input
-            id="activity-from"
+            id="mod-activity-from"
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
           />
         </div>
         <div className="audit-date-group">
-          <label htmlFor="activity-to">To</label>
+          <label htmlFor="mod-activity-to">To</label>
           <input
-            id="activity-to"
+            id="mod-activity-to"
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
@@ -277,4 +277,4 @@ function MyActivityTab() {
   );
 }
 
-export default MyActivityTab;
+export default ModeratorActivityTab;

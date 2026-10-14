@@ -12,6 +12,8 @@ import CreatePost from "./pages/CreatePost";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminEmergencyDashboard from "./pages/AdminEmergencyDashboard";
 import AdminNavBar from "./components/AdminNavBar";
+import ModeratorDashboard from "./pages/ModeratorDashboard";
+import ModeratorNavBar from "./components/ModeratorNavBar";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SuperAdminNavBar from "./components/SuperAdminNavBar";
 import GettingStarted from "./pages/GettingStarted";
@@ -26,7 +28,9 @@ function AppContent() {
   const token = localStorage.getItem("token");
   const userRole = localStorage.getItem("role");
   const isSuperAdmin = userRole === "super_admin";
-  const isAdmin = userRole === "admin" || userRole === "super_admin";
+  const isAdmin = userRole === "admin";
+  const isModerator = userRole === "moderator";
+  const isAdminOrMod = isAdmin || isSuperAdmin || isModerator;
   const location = useLocation();
   const isAuthPage =
     ["/login", "/register", "/getting-started", "/forgot-password", "/verify-code"].includes(location.pathname) ||
@@ -35,6 +39,7 @@ function AppContent() {
   const renderNavBar = () => {
     if (isSuperAdmin) return <SuperAdminNavBar />;
     if (isAdmin) return <AdminNavBar />;
+    if (isModerator) return <ModeratorNavBar />;
     return <NavBar />;
   };
 
@@ -59,10 +64,21 @@ function AppContent() {
         <Route path="/dashboard" element={token ? <Dashboard /> : <Navigate to="/login" />} />
 
         <Route
+          path="/moderator"
+          element={
+            token
+              ? isModerator
+                ? <ModeratorDashboard />
+                : <Navigate to="/browse" replace />
+              : <Navigate to="/login" />
+          }
+        />
+
+        <Route
           path="/admin"
           element={
             token
-              ? isAdmin && !isSuperAdmin
+              ? isAdmin
                 ? <AdminDashboard />
                 : isSuperAdmin
                   ? <Navigate to="/superadmin" replace />
@@ -88,7 +104,7 @@ function AppContent() {
             token
               ? isSuperAdmin
                 ? <SuperAdminDashboard />
-                : <Navigate to="/admin" replace />
+                : <Navigate to="/browse" replace />
               : <Navigate to="/login" />
           }
         />

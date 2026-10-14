@@ -10,7 +10,7 @@ import {
   FaUserCog,
   FaChevronDown
 } from "react-icons/fa";
-import { getDashboard, getPendingReportCount, getUnreadNotificationCount } from "../api";
+import { getDashboard, getUnreadNotificationCount } from "../api";
 import { useNotificationBadge } from "../hooks/useNotificationBadge";
 import NotificationBell from "./NotificationBell";
 
@@ -21,7 +21,6 @@ function AdminNavBar() {
   const userName = localStorage.getItem("userName") || "Admin";
   const token = localStorage.getItem("token");
   const [unreadMessages, setUnreadMessages] = useState(0);
-  const [pendingReports, setPendingReports] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -32,14 +31,12 @@ function AdminNavBar() {
     let cancelled = false;
     const fetchCounts = async () => {
       try {
-        const [dashRes, reportsRes, notifRes] = await Promise.all([
+        const [dashRes, notifRes] = await Promise.all([
           getDashboard(token),
-          getPendingReportCount(token),
           getUnreadNotificationCount(token)
         ]);
         if (!cancelled) {
           setUnreadMessages(dashRes.data.unreadMessages || 0);
-          setPendingReports(reportsRes.data.count || 0);
           setUnreadNotifications(notifRes.data.count || 0);
         }
       } catch {
@@ -74,7 +71,7 @@ function AdminNavBar() {
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
-  const totalBadge = unreadMessages + pendingReports + unreadNotifications;
+  const totalBadge = unreadMessages + unreadNotifications;
   useNotificationBadge(totalBadge, "SkillShare Admin");
 
   const handleLogout = () => {
@@ -93,7 +90,7 @@ function AdminNavBar() {
       </Link>
 
       <div className="admin-nav-status">
-        <span className="admin-nav-dot" /> Moderator mode
+        <span className="admin-nav-dot" /> Admin mode
       </div>
 
       <div className="admin-nav-links">
@@ -115,9 +112,6 @@ function AdminNavBar() {
         <NavLink className="admin-nav-link admin-panel-link" to="/admin">
           <FaShieldAlt className="admin-nav-icon" aria-hidden="true" />
           <span>Admin panel</span>
-          {pendingReports > 0 && (
-            <span className="nav-badge">{pendingReports > 99 ? "99+" : pendingReports}</span>
-          )}
         </NavLink>
       </div>
 

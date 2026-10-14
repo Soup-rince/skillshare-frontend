@@ -6,7 +6,8 @@ import {
   FaUserCheck,
   FaUserShield,
   FaUser,
-  FaBan
+  FaBan,
+  FaUserTie
 } from "react-icons/fa";
 import {
   getAllUsers,
@@ -41,6 +42,12 @@ function formatDate(dateStr) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function getRoleIcon(role) {
+  if (role === "moderator") return <FaUserTie />;
+  if (role === "admin") return <FaUserShield />;
+  return <FaUser />;
 }
 
 function UserManagementTab() {
@@ -118,13 +125,12 @@ function UserManagementTab() {
     });
   };
 
-  const handleChangeRole = (user, newRole) => {
-    const action = newRole === "admin" ? "Promote" : "Demote";
+  const handleChangeRole = (user, newRole, actionLabel) => {
     setConfirmDialog({
-      title: `${action} user`,
-      message: `${action} ${user.name} to ${newRole.replace("_", " ")}?`,
-      confirmLabel: action,
-      tone: newRole === "admin" ? "info" : "danger",
+      title: `${actionLabel} user`,
+      message: `${actionLabel} ${user.name} to ${newRole.replace("_", " ")}?`,
+      confirmLabel: actionLabel,
+      tone: newRole === "moderator" ? "info" : "danger",
       onConfirm: async () => {
         setActionId(user._id);
         try {
@@ -158,6 +164,7 @@ function UserManagementTab() {
         <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
           <option value="">All roles</option>
           <option value="member">Members</option>
+          <option value="moderator">Moderators</option>
           <option value="admin">Admins</option>
           <option value="super_admin">Super admins</option>
         </select>
@@ -183,7 +190,11 @@ function UserManagementTab() {
           {users.map((user) => {
             const isSelf = user._id === myId;
             const isSuperAdminUser = user.role === "super_admin";
-            const canAct = !isSelf && !isSuperAdminUser;
+            const isAdminUser = user.role === "admin";
+            const isModeratorUser = user.role === "moderator";
+            const isMemberUser = user.role === "member";
+
+            const canAct = !isSelf && !isSuperAdminUser && !isAdminUser;
 
             return (
               <article className="admin-user-row" key={user._id}>
@@ -200,7 +211,7 @@ function UserManagementTab() {
                     <div className="admin-user-name-row">
                       <h3>{user.name}</h3>
                       <span className={`role-badge role-${user.role}`}>
-                        {user.role === "member" ? <FaUser /> : <FaUserShield />}
+                        {getRoleIcon(user.role)}
                         <span>{user.role.replace("_", " ")}</span>
                       </span>
                       {user.isSuspended && (
@@ -248,27 +259,27 @@ function UserManagementTab() {
                       </button>
                     )}
 
-                    {user.role === "member" && (
+                    {isMemberUser && (
                       <button
                         className="button-secondary"
                         type="button"
-                        onClick={() => handleChangeRole(user, "admin")}
+                        onClick={() => handleChangeRole(user, "moderator", "Promote")}
                         disabled={actionId === user._id}
                       >
-                        <FaUserShield aria-hidden="true" />
-                        <span>Promote</span>
+                        <FaUserTie aria-hidden="true" />
+                        <span>Promote to Moderator</span>
                       </button>
                     )}
 
-                    {user.role === "admin" && (
+                    {isModeratorUser && (
                       <button
                         className="button-secondary"
                         type="button"
-                        onClick={() => handleChangeRole(user, "member")}
+                        onClick={() => handleChangeRole(user, "member", "Demote")}
                         disabled={actionId === user._id}
                       >
                         <FaUser aria-hidden="true" />
-                        <span>Demote</span>
+                        <span>Demote to Member</span>
                       </button>
                     )}
                   </div>
