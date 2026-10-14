@@ -176,8 +176,7 @@ function AuditLogTab() {
       (log.actorName || "").toLowerCase().includes(q) ||
       (log.actorRole || "").toLowerCase().includes(q) ||
       (log.action || "").toLowerCase().includes(q) ||
-      (log.targetName || "").toLowerCase().includes(q) ||
-      (log.ipAddress || "").toLowerCase().includes(q)
+      (log.targetName || "").toLowerCase().includes(q)
     );
   });
 
@@ -238,7 +237,7 @@ function AuditLogTab() {
         <FaSearch className="admin-search-icon" aria-hidden="true" />
         <input
           type="text"
-          placeholder="Search by actor, action, target, or IP"
+          placeholder="Search by actor, action, or target"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -311,9 +310,6 @@ function AuditLogTab() {
                       )}
                       <div className="audit-log-meta">
                         <span className="audit-log-time">{formatTime(log.createdAt)}</span>
-                        {log.ipAddress && (
-                          <span className="audit-log-ip">IP: {log.ipAddress}</span>
-                        )}
                       </div>
                     </div>
                   </article>

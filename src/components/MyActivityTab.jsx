@@ -3,10 +3,8 @@ import {
   FaSearch,
   FaDownload,
   FaUser,
-  FaBan,
   FaTrash,
   FaCheck,
-  FaFlag,
   FaSignInAlt,
   FaKey,
   FaTimesCircle
@@ -146,8 +144,7 @@ function MyActivityTab() {
     if (!q) return true;
     return (
       (log.action || "").toLowerCase().includes(q) ||
-      (log.targetName || "").toLowerCase().includes(q) ||
-      (log.ipAddress || "").toLowerCase().includes(q)
+      (log.targetName || "").toLowerCase().includes(q)
     );
   });
 
@@ -208,7 +205,7 @@ function MyActivityTab() {
         <FaSearch className="admin-search-icon" aria-hidden="true" />
         <input
           type="text"
-          placeholder="Search by action, target, or IP"
+          placeholder="Search by action or target"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -267,9 +264,6 @@ function MyActivityTab() {
                       )}
                       <div className="audit-log-meta">
                         <span className="audit-log-time">{formatTime(log.createdAt)}</span>
-                        {log.ipAddress && (
-                          <span className="audit-log-ip">IP: {log.ipAddress}</span>
-                        )}
                       </div>
                     </div>
                   </article>
