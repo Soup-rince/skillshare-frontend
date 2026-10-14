@@ -5,11 +5,15 @@ import {
   FaUserShield,
   FaUser,
   FaBan,
-  FaUserTie
+  FaUserTie,
+  FaUserSlash,
+  FaUserCheck
 } from "react-icons/fa";
 import {
   getAllModerators,
-  changeUserRole
+  changeUserRole,
+  suspendModerator,
+  unsuspendModerator
 } from "../api";
 import ConfirmDialog from "./ConfirmDialog";
 
@@ -73,10 +77,14 @@ function ModeratorManagementTab() {
       message: `Promote ${user.name} to Admin? They will gain access to user management and moderation controls.`,
       confirmLabel: "Promote",
       tone: "info",
-      onConfirm: async () => {
+      inputLabel: "Reason for promotion",
+      inputPlaceholder: "e.g. Excellent moderation work, ready for more responsibility",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
         setActionId(user._id);
         try {
-          await changeUserRole(user._id, { role: "admin" }, token);
+          await changeUserRole(user._id, { role: "admin", reason }, token);
           await loadModerators();
         } catch (err) {
           setError(err.response?.data?.message || "Could not promote user.");
@@ -94,13 +102,63 @@ function ModeratorManagementTab() {
       message: `Demote ${user.name} to Member? They will lose all moderator privileges.`,
       confirmLabel: "Demote",
       tone: "danger",
-      onConfirm: async () => {
+      inputLabel: "Reason for demotion",
+      inputPlaceholder: "e.g. Inactive for 60+ days",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
         setActionId(user._id);
         try {
-          await changeUserRole(user._id, { role: "member" }, token);
+          await changeUserRole(user._id, { role: "member", reason }, token);
           await loadModerators();
         } catch (err) {
           setError(err.response?.data?.message || "Could not demote user.");
+        } finally {
+          setActionId("");
+          setConfirmDialog(null);
+        }
+      }
+    });
+  };
+
+  const handleSuspend = (user) => {
+    setConfirmDialog({
+      title: "Suspend moderator",
+      message: `Suspend ${user.name}? They will not be able to log in.`,
+      confirmLabel: "Suspend",
+      tone: "danger",
+      inputLabel: "Reason for suspension",
+      inputPlaceholder: "e.g. Violation of community guidelines",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
+        setActionId(user._id);
+        try {
+          await suspendModerator(user._id, { reason }, token);
+          await loadModerators();
+        } catch (err) {
+          setError(err.response?.data?.message || "Could not suspend moderator.");
+        } finally {
+          setActionId("");
+          setConfirmDialog(null);
+        }
+      }
+    });
+  };
+
+  const handleUnsuspend = (user) => {
+    setConfirmDialog({
+      title: "Unsuspend moderator",
+      message: `Restore access for ${user.name}?`,
+      confirmLabel: "Unsuspend",
+      tone: "info",
+      onConfirm: async () => {
+        setActionId(user._id);
+        try {
+          await unsuspendModerator(user._id, token);
+          await loadModerators();
+        } catch (err) {
+          setError(err.response?.data?.message || "Could not unsuspend moderator.");
         } finally {
           setActionId("");
           setConfirmDialog(null);
@@ -175,6 +233,9 @@ function ModeratorManagementTab() {
                     <p className="admin-user-email">{user.email}</p>
                     <p className="admin-user-meta">
                       Joined {formatDate(user.createdAt)}
+                      {user.isSuspended && user.suspendedReason && (
+                        <> · Reason: {user.suspendedReason}</>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -204,6 +265,28 @@ function ModeratorManagementTab() {
                       <FaUser aria-hidden="true" />
                       <span>Demote to Member</span>
                     </button>
+
+                    {user.isSuspended ? (
+                      <button
+                        className="button-secondary"
+                        type="button"
+                        onClick={() => handleUnsuspend(user)}
+                        disabled={actionId === user._id}
+                      >
+                        <FaUserCheck aria-hidden="true" />
+                        <span>Unsuspend</span>
+                      </button>
+                    ) : (
+                      <button
+                        className="button-danger"
+                        type="button"
+                        onClick={() => handleSuspend(user)}
+                        disabled={actionId === user._id}
+                      >
+                        <FaUserSlash aria-hidden="true" />
+                        <span>Suspend</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </article>
@@ -219,6 +302,10 @@ function ModeratorManagementTab() {
         confirmLabel={confirmDialog?.confirmLabel || "Confirm"}
         cancelLabel={confirmDialog?.cancelLabel || "Cancel"}
         tone={confirmDialog?.tone || "danger"}
+        inputLabel={confirmDialog?.inputLabel}
+        inputPlaceholder={confirmDialog?.inputPlaceholder}
+        inputRequired={confirmDialog?.inputRequired}
+        inputMinLength={confirmDialog?.inputMinLength}
         onConfirm={confirmDialog?.onConfirm || (() => {})}
         onCancel={() => setConfirmDialog(null)}
       />

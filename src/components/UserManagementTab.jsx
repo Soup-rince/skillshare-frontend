@@ -126,15 +126,24 @@ function UserManagementTab() {
   };
 
   const handleChangeRole = (user, newRole, actionLabel) => {
+    const isPromote = actionLabel === "Promote";
     setConfirmDialog({
       title: `${actionLabel} user`,
-      message: `${actionLabel} ${user.name} to ${newRole.replace("_", " ")}?`,
+      message: isPromote
+        ? `${actionLabel} ${user.name} to ${newRole.replace("_", " ")}?`
+        : `${actionLabel} ${user.name} to ${newRole.replace("_", " ")}?`,
       confirmLabel: actionLabel,
-      tone: newRole === "moderator" ? "info" : "danger",
-      onConfirm: async () => {
+      tone: isPromote ? "info" : "danger",
+      inputLabel: `Reason for ${actionLabel.toLowerCase()}`,
+      inputPlaceholder: isPromote
+        ? `e.g. Consistently helpful and active in community`
+        : `e.g. Inactive for 60+ days`,
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
         setActionId(user._id);
         try {
-          await changeUserRole(user._id, { role: newRole }, token);
+          await changeUserRole(user._id, { role: newRole, reason }, token);
           await loadUsers();
         } catch (err) {
           setError(err.response?.data?.message || "Could not change role.");
@@ -297,6 +306,10 @@ function UserManagementTab() {
         confirmLabel={confirmDialog?.confirmLabel || "Confirm"}
         cancelLabel={confirmDialog?.cancelLabel || "Cancel"}
         tone={confirmDialog?.tone || "danger"}
+        inputLabel={confirmDialog?.inputLabel}
+        inputPlaceholder={confirmDialog?.inputPlaceholder}
+        inputRequired={confirmDialog?.inputRequired}
+        inputMinLength={confirmDialog?.inputMinLength}
         onConfirm={confirmDialog?.onConfirm || (() => {})}
         onCancel={() => setConfirmDialog(null)}
       />

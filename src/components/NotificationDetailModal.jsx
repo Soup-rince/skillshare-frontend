@@ -1,5 +1,16 @@
 import { createPortal } from "react-dom";
-import { FaTimes, FaStar, FaFlag, FaBan, FaTrash, FaShieldAlt, FaUser, FaCheck } from "react-icons/fa";
+import {
+  FaTimes,
+  FaStar,
+  FaFlag,
+  FaBan,
+  FaTrash,
+  FaShieldAlt,
+  FaUser,
+  FaUserTie,
+  FaCrown,
+  FaCheck
+} from "react-icons/fa";
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
@@ -21,6 +32,18 @@ const REASON_LABELS = {
   other: "Other"
 };
 
+function getRoleIcon(role) {
+  if (role === "moderator") return <FaUserTie />;
+  if (role === "admin") return <FaShieldAlt />;
+  if (role === "super_admin") return <FaCrown />;
+  return <FaUser />;
+}
+
+function getRoleLabel(role) {
+  if (!role) return "Member";
+  return role.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function NotificationDetailModal({ notification, onClose, onNavigate }) {
   if (!notification) return null;
 
@@ -41,10 +64,6 @@ function NotificationDetailModal({ notification, onClose, onNavigate }) {
               <div className="ndm-row">
                 <span className="ndm-label">Reason</span>
                 <span className="ndm-value">{REASON_LABELS[metadata.reason] || metadata.reason || "Not specified"}</span>
-              </div>
-              <div className="ndm-row">
-                <span className="ndm-label">Reported by</span>
-                <span className="ndm-value">{metadata.reporterName || "Unknown"}</span>
               </div>
               <div className="ndm-row">
                 <span className="ndm-label">Post</span>
@@ -86,15 +105,9 @@ function NotificationDetailModal({ notification, onClose, onNavigate }) {
                 <span className="ndm-label">Post</span>
                 <span className="ndm-value">"{metadata.postTitle || "Untitled"}"</span>
               </div>
-              {metadata.resolvedBy && (
-                <div className="ndm-row">
-                  <span className="ndm-label">Resolved by</span>
-                  <span className="ndm-value">{metadata.resolvedBy}</span>
-                </div>
-              )}
               {metadata.adminNote && (
                 <div className="ndm-block">
-                  <span className="ndm-label">Admin note</span>
+                  <span className="ndm-label">Note</span>
                   <p className="ndm-details">{metadata.adminNote}</p>
                 </div>
               )}
@@ -157,10 +170,6 @@ function NotificationDetailModal({ notification, onClose, onNavigate }) {
                 <span className="ndm-value">{metadata.reason || "Not specified"}</span>
               </div>
               <div className="ndm-row">
-                <span className="ndm-label">Suspended by</span>
-                <span className="ndm-value">{metadata.suspendedBy || "Administrator"}</span>
-              </div>
-              <div className="ndm-row">
                 <span className="ndm-label">Date</span>
                 <span className="ndm-value">{formatDate(metadata.suspendedAt)}</span>
               </div>
@@ -189,10 +198,6 @@ function NotificationDetailModal({ notification, onClose, onNavigate }) {
                 </div>
               )}
               <div className="ndm-row">
-                <span className="ndm-label">Removed by</span>
-                <span className="ndm-value">{metadata.deletedBy || "Administrator"}</span>
-              </div>
-              <div className="ndm-row">
                 <span className="ndm-label">Date</span>
                 <span className="ndm-value">{formatDate(metadata.deletedAt)}</span>
               </div>
@@ -202,48 +207,61 @@ function NotificationDetailModal({ notification, onClose, onNavigate }) {
                   <p className="ndm-details">{metadata.postDescription}</p>
                 </div>
               )}
-              <div className="ndm-block">
-                <p className="ndm-note">This post was removed for violating community guidelines.</p>
-              </div>
+              {metadata.reason && (
+                <div className="ndm-block">
+                  <span className="ndm-label">Reason for removal</span>
+                  <p className="ndm-details">{metadata.reason}</p>
+                </div>
+              )}
             </div>
           </>
         );
 
       case 'promoted':
       case 'demoted':
+        const newRole = metadata.newRole || "member";
+        const oldRole = metadata.oldRole || "member";
+        const isPromoted = type === "promoted";
+        const headerColor = isPromoted ? "#168565" : "#a16207";
+        const headerBg = isPromoted ? "#d8f3e9" : "#fef9c3";
+
         return (
           <>
             <div className="ndm-header">
-              <div className="ndm-header-icon" style={{ color: "#168565", background: "#d8f3e9" }}>
-                {type === 'promoted' ? <FaShieldAlt /> : <FaUser />}
+              <div className="ndm-header-icon" style={{ color: headerColor, background: headerBg }}>
+                {getRoleIcon(newRole)}
               </div>
-              <h2>{type === 'promoted' ? 'Promoted to Admin' : 'Role Changed'}</h2>
+              <h2>
+                {isPromoted
+                  ? `Promoted to ${getRoleLabel(newRole)}`
+                  : `Role Changed to ${getRoleLabel(newRole)}`}
+              </h2>
             </div>
             <div className="ndm-body">
-              {metadata.userName && (
-                <div className="ndm-row">
-                  <span className="ndm-label">User</span>
-                  <span className="ndm-value">{metadata.userName}</span>
-                </div>
-              )}
-              {metadata.oldRole && (
-                <div className="ndm-row">
-                  <span className="ndm-label">Old role</span>
-                  <span className="ndm-value" style={{ textTransform: "capitalize" }}>{metadata.oldRole}</span>
-                </div>
-              )}
               <div className="ndm-row">
-                <span className="ndm-label">New role</span>
-                <span className="ndm-value" style={{ textTransform: "capitalize" }}>{metadata.newRole || "member"}</span>
+                <span className="ndm-label">Old role</span>
+                <span className="ndm-value" style={{ display: "inline-flex", alignItems: "center", gap: 6, textTransform: "capitalize" }}>
+                  {getRoleIcon(oldRole)} {getRoleLabel(oldRole)}
+                </span>
               </div>
               <div className="ndm-row">
-                <span className="ndm-label">Changed by</span>
-                <span className="ndm-value">{metadata.changedBy || "Super Admin"}</span>
+                <span className="ndm-label">New role</span>
+                <span className="ndm-value" style={{ display: "inline-flex", alignItems: "center", gap: 6, textTransform: "capitalize" }}>
+                  {getRoleIcon(newRole)} {getRoleLabel(newRole)}
+                </span>
               </div>
               <div className="ndm-row">
                 <span className="ndm-label">Date</span>
                 <span className="ndm-value">{formatDate(metadata.changedAt)}</span>
               </div>
+              {metadata.reason && (
+                <div className="ndm-block" style={{ borderLeft: `3px solid ${headerColor}`, background: headerBg }}>
+                  <span className="ndm-label">
+                    {isPromoted ? "Reason for promotion" : "Reason for demotion"}
+                  </span>
+                  <p className="ndm-details">{metadata.reason}</p>
+                </div>
+              )}
             </div>
           </>
         );

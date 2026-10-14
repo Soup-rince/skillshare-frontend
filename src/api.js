@@ -56,8 +56,9 @@ export const updatePost = (id, data, token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-export const deletePost = (id, token) =>
+export const deletePost = (id, data, token) =>
   axios.delete(`${API_URL}/posts/${id}`, {
+    data: data || {},
     headers: { Authorization: `Bearer ${token}` }
   });
 
@@ -241,13 +242,13 @@ export const getAllSuperAdmins = (token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-export const promoteToSuperAdmin = (id, token) =>
-  axios.patch(`${API_URL}/superadmin/admins/${id}/promote`, {}, {
+export const promoteToSuperAdmin = (id, data, token) =>
+  axios.patch(`${API_URL}/superadmin/admins/${id}/promote`, data || {}, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-export const demoteFromSuperAdmin = (id, token) =>
-  axios.patch(`${API_URL}/superadmin/superadmins/${id}/demote`, {}, {
+export const demoteFromSuperAdmin = (id, data, token) =>
+  axios.patch(`${API_URL}/superadmin/superadmins/${id}/demote`, data || {}, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
@@ -357,5 +358,25 @@ export const exportAdminAuditLogs = (params, token) =>
   axios.get(`${API_URL}/superadmin/admin-audit-logs/export`, {
     params,
     responseType: "blob",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const suspendModerator = (id, data, token) =>
+  axios.patch(`${API_URL}/superadmin/moderators/${id}/suspend`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const unsuspendModerator = (id, token) =>
+  axios.patch(`${API_URL}/superadmin/moderators/${id}/unsuspend`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const suspendAdmin = (id, data, token) =>
+  axios.patch(`${API_URL}/superadmin/admins/${id}/suspend`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const unsuspendAdmin = (id, token) =>
+  axios.patch(`${API_URL}/superadmin/admins/${id}/unsuspend`, {}, {
     headers: { Authorization: `Bearer ${token}` }
   });

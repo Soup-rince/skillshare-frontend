@@ -10,6 +10,7 @@ import {
   FaCheck,
   FaShieldAlt,
   FaUser,
+  FaUserTie,
   FaTimes
 } from "react-icons/fa";
 import {
@@ -30,7 +31,8 @@ const ICON_MAP = {
   flag: FaFlag,
   check: FaCheck,
   shield: FaShieldAlt,
-  user: FaUser
+  user: FaUser,
+  moderator: FaUserTie
 };
 
 const TYPE_COLORS = {
@@ -58,6 +60,36 @@ function formatRelativeTime(dateStr) {
   if (diffHour < 24) return `${diffHour}h ago`;
   if (diffDay < 7) return `${diffDay}d ago`;
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function getReasonPreview(notif) {
+  const meta = notif.metadata || {};
+  if ((notif.type === "promoted" || notif.type === "demoted") && meta.reason) {
+    return `Reason: ${meta.reason}`;
+  }
+  if (notif.type === "post_deleted" && meta.reason) {
+    return `Reason: ${meta.reason}`;
+  }
+  if (notif.type === "suspended" && meta.reason) {
+    return `Reason: ${meta.reason}`;
+  }
+  return null;
+}
+
+function getIconForNotification(notif) {
+  if (notif.icon && ICON_MAP[notif.icon]) return ICON_MAP[notif.icon];
+  if (notif.type === "promoted") {
+    const newRole = notif.metadata?.newRole;
+    if (newRole === "moderator") return FaUserTie;
+    if (newRole === "super_admin") return FaShieldAlt;
+    return FaShieldAlt;
+  }
+  if (notif.type === "demoted") {
+    const newRole = notif.metadata?.newRole;
+    if (newRole === "moderator") return FaUserTie;
+    return FaUser;
+  }
+  return FaBell;
 }
 
 function NotificationBell() {
@@ -201,8 +233,9 @@ function NotificationBell() {
                 </div>
               ) : (
                 notifications.map((notif) => {
-                  const IconComponent = ICON_MAP[notif.icon] || FaBell;
+                  const IconComponent = getIconForNotification(notif);
                   const color = TYPE_COLORS[notif.type] || "#66708a";
+                  const reasonPreview = getReasonPreview(notif);
                   return (
                     <div
                       role="button"
@@ -225,7 +258,11 @@ function NotificationBell() {
                       </span>
                       <div className="notification-item-body">
                         <strong>{notif.title}</strong>
-                        {notif.message && <p>{notif.message}</p>}
+                        {reasonPreview ? (
+                          <p style={{ color: "#4b5563", fontStyle: "italic" }}>{reasonPreview}</p>
+                        ) : (
+                          notif.message && <p>{notif.message}</p>
+                        )}
                         <span className="notification-item-time">
                           {formatRelativeTime(notif.createdAt)}
                         </span>
@@ -250,8 +287,8 @@ function NotificationBell() {
 
       <NotificationDetailModal
         notification={selectedNotification}
-        onClose={() => setSelectedNotification(null)}
         onNavigate={(link) => navigate(link)}
+        onClose={() => setSelectedNotification(null)}
       />
     </>
   );

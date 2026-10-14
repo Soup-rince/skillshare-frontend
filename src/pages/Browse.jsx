@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { FaStar } from "react-icons/fa";
-import { getSkillPosts, getMatches, searchUsers } from "../api";
+import { Link, useNavigate } from "react-router-dom";
+import { FaStar, FaTrash } from "react-icons/fa";
+import { getSkillPosts, getMatches, searchUsers, deletePost } from "../api";
 import { CATEGORIES } from "../constants/categories";
+import { useConfirm } from "../contexts/ConfirmContext";
 
 function getInitials(name) {
   if (!name) return "?";
@@ -35,7 +36,9 @@ function shuffleArray(array) {
 }
 
 function Browse() {
-  const [activeTab, setActiveTab] = useState("posts"); // "posts" | "members"
+  const navigate = useNavigate();
+  const confirm = useConfirm();
+  const [activeTab, setActiveTab] = useState("posts");
 
   // Posts state
   const [posts, setPosts] = useState([]);
@@ -44,6 +47,7 @@ function Browse() {
   const [category, setCategory] = useState("");
   const [postType, setPostType] = useState("");
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState("");
 
   // Members state
   const [memberQuery, setMemberQuery] = useState("");
@@ -54,6 +58,10 @@ function Browse() {
   const [membersTotalPages, setMembersTotalPages] = useState(1);
 
   const token = localStorage.getItem("token");
+  const userRole = localStorage.getItem("role");
+  const isModerator = userRole === "moderator";
+  const isSuperAdmin = userRole === "super_admin";
+  const canDeleteAny = isModerator || isSuperAdmin;
 
   const fetchPosts = async () => {
     const params = {};
@@ -90,7 +98,6 @@ function Browse() {
     return () => window.clearTimeout(initialLoad);
   }, []);
 
-  // Debounced members fetch
   useEffect(() => {
     if (activeTab !== "members") return;
 
@@ -112,7 +119,6 @@ function Browse() {
     return () => window.clearTimeout(timer);
   }, [activeTab, memberQuery, membersPage]);
 
-  // Reset page kapag nag-iba ang query
   useEffect(() => {
     setMembersPage(1);
   }, [memberQuery]);
@@ -120,6 +126,30 @@ function Browse() {
   const handleSearch = (e) => {
     e.preventDefault();
     fetchPosts();
+  };
+
+  const handleDeletePost = async (e, post) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const ok = await confirm({
+      title: "Delete this post?",
+      message: `The post "${post.title || "Untitled"}" will be permanently deleted. The post owner will be notified.`,
+      confirmLabel: "Delete post",
+      cancelLabel: "Cancel",
+      tone: "danger",
+    });
+    if (!ok) return;
+
+    try {
+      setDeletingId(post._id);
+      await deletePost(post._id, token);
+      setPosts((current) => current.filter((p) => p._id !== post._id));
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to delete this post.");
+    } finally {
+      setDeletingId("");
+    }
   };
 
   return (
@@ -132,7 +162,6 @@ function Browse() {
         </div>
       </header>
 
-      {/* TABS */}
       <div className="browse-tabs" role="tablist" aria-label="Browse mode">
         <button
           type="button"
@@ -154,7 +183,6 @@ function Browse() {
         </button>
       </div>
 
-      {/* ================= POSTS TAB ================= */}
       {activeTab === "posts" && (
         <>
           {matches.length > 0 && (
@@ -264,6 +292,18 @@ function Browse() {
                   <p className="post-description">{post.description}</p>
                   <p className="post-meta">{post.category} · {post.proficiencyLevel} · by {ownerName}</p>
                   <span className="post-card-link">View details →</span>
+
+                  {canDeleteAny && (
+                    <button
+                      type="button"
+                      className="post-card-admin-delete"
+                      onClick={(e) => handleDeletePost(e, post)}
+                      disabled={deletingId === post._id}
+                      aria-label="Delete post"
+                    >
+                      <FaTrash />
+                    </button>
+                  )}
                 </Link>
               );
             })}
@@ -271,7 +311,6 @@ function Browse() {
         </>
       )}
 
-      {/* ================= MEMBERS TAB ================= */}
       {activeTab === "members" && (
         <section aria-label="Members">
           <form className="toolbar" onSubmit={(e) => e.preventDefault()}>

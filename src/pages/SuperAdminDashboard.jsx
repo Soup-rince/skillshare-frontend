@@ -97,10 +97,14 @@ function SuperAdminDashboard() {
       message: `Demote ${user.name} from Super Admin to Admin? They will lose full system access.`,
       confirmLabel: "Demote",
       tone: "danger",
-      onConfirm: async () => {
+      inputLabel: "Reason for demotion",
+      inputPlaceholder: "e.g. Stepping down, role restructuring",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
         setActionId(user._id);
         try {
-          await demoteFromSuperAdmin(user._id, token);
+          await demoteFromSuperAdmin(user._id, { reason }, token);
           const superRes = await getAllSuperAdmins(token);
           setSuperAdmins(superRes.data);
         } catch (err) {
@@ -345,6 +349,10 @@ function SuperAdminDashboard() {
         confirmLabel={confirmDialog?.confirmLabel || "Confirm"}
         cancelLabel={confirmDialog?.cancelLabel || "Cancel"}
         tone={confirmDialog?.tone || "danger"}
+        inputLabel={confirmDialog?.inputLabel}
+        inputPlaceholder={confirmDialog?.inputPlaceholder}
+        inputRequired={confirmDialog?.inputRequired}
+        inputMinLength={confirmDialog?.inputMinLength}
         onConfirm={confirmDialog?.onConfirm || (() => {})}
         onCancel={() => setConfirmDialog(null)}
       />

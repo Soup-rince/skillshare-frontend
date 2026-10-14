@@ -19,7 +19,10 @@ function PostDetail() {
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [lightboxName, setLightboxName] = useState("");
 
-  const isAdmin = localStorage.getItem("role") === "admin" || localStorage.getItem("role") === "super_admin";
+  const userRole = localStorage.getItem("role");
+  const isModerator = userRole === "moderator";
+  const isSuperAdmin = userRole === "super_admin";
+  const canModerate = isModerator || isSuperAdmin;
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -56,7 +59,7 @@ function PostDetail() {
     }
   };
 
-  const handleAdminDelete = async () => {
+  const handleModeratorDelete = async () => {
     const shouldDelete = await confirm({
       title: "Delete this post?",
       message: `The post "${post?.title || "Untitled"}" will be permanently deleted. This action cannot be undone. The post owner will be notified.`,
@@ -69,7 +72,7 @@ function PostDetail() {
       setDeleting(true);
       setActionError("");
       await deletePost(id, token);
-      navigate("/admin");
+      navigate("/browse");
     } catch (err) {
       setActionError(
         err.response?.data?.message || "Unable to delete this post."
@@ -87,7 +90,7 @@ function PostDetail() {
   if (!post) return <main className="page-container"><div className="empty-state"><p>Loading skill post...</p></div></main>;
 
   const isOwner = post.owner?._id === myId;
-  const canAdminDelete = isAdmin && !isOwner;
+  const canModerateDelete = canModerate && !isOwner;
 
   return (
     <main className="page-container detail-layout">
@@ -142,18 +145,18 @@ function PostDetail() {
             >
               Message {post.owner?.name}
             </button>
-            {canAdminDelete && (
+            {canModerateDelete && (
               <button
                 className="button-danger"
                 type="button"
-                onClick={handleAdminDelete}
+                onClick={handleModeratorDelete}
                 disabled={deleting}
               >
                 <FaTrash aria-hidden="true" />
-                <span>{deleting ? "Deleting..." : "Delete post (admin)"}</span>
+                <span>{deleting ? "Deleting..." : "Delete post (moderator)"}</span>
               </button>
             )}
-            {!isAdmin && (
+            {!canModerate && (
               <button
                 className="report-button"
                 type="button"

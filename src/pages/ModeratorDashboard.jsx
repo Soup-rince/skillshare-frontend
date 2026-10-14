@@ -58,11 +58,15 @@ function ModeratorDashboard() {
       confirmLabel: "Delete post",
       cancelLabel: "Cancel",
       tone: "danger",
-      onConfirm: async () => {
+      inputLabel: "Reason for deletion",
+      inputPlaceholder: "Why is this post being deleted?",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
         setDeletingId(postId);
         setError("");
         try {
-          await deletePost(postId, token);
+          await deletePost(postId, { reason }, token);
           setPosts((currentPosts) =>
             currentPosts.filter((post) => post._id !== postId)
           );
@@ -92,7 +96,11 @@ function ModeratorDashboard() {
         confirmLabel: "Dismiss report",
         cancelLabel: "Cancel",
         tone: "info",
-        onConfirm: async () => {
+        inputLabel: "Note to reporter (optional)",
+        inputPlaceholder: "Leave blank for default message",
+        inputRequired: false,
+        inputMinLength: 0,
+        onConfirm: async (reason) => {
           setReportActionId(reportId);
           setError("");
           try {
@@ -100,7 +108,7 @@ function ModeratorDashboard() {
               reportId,
               {
                 status: "dismissed",
-                adminNote: `After careful review of the report on "${postTitle}", we determined that the content does not violate our community guidelines. No action has been taken. Thank you for your vigilance in helping keep SkillShare safe.`
+                reason: reason || ""
               },
               token
             );
@@ -122,17 +130,21 @@ function ModeratorDashboard() {
         confirmLabel: "Delete post",
         cancelLabel: "Cancel",
         tone: "danger",
-        onConfirm: async () => {
+        inputLabel: "Reason for deletion",
+        inputPlaceholder: "Why is this post being deleted?",
+        inputRequired: true,
+        inputMinLength: 5,
+        onConfirm: async (reason) => {
           setReportActionId(reportId);
           setError("");
           try {
             if (!report?.post?._id) return;
-            await deletePost(report.post._id, token);
+            await deletePost(report.post._id, { reason }, token);
             await updateModeratorReportStatus(
               reportId,
               {
                 status: "resolved",
-                adminNote: `After reviewing the report, we determined that the post violated our community guidelines. The post has been removed from SkillShare. Thank you for helping keep our community safe.`
+                reason: reason
               },
               token
             );
@@ -145,7 +157,7 @@ function ModeratorDashboard() {
                   ? {
                       ...r,
                       status: "resolved",
-                      adminNote: `After reviewing the report, we determined that the post violated our community guidelines. The post has been removed from SkillShare.`
+                      adminNote: reason
                     }
                   : r
               )
@@ -450,6 +462,10 @@ function ModeratorDashboard() {
         confirmLabel={confirmDialog?.confirmLabel || "Confirm"}
         cancelLabel={confirmDialog?.cancelLabel || "Cancel"}
         tone={confirmDialog?.tone || "danger"}
+        inputLabel={confirmDialog?.inputLabel}
+        inputPlaceholder={confirmDialog?.inputPlaceholder}
+        inputRequired={confirmDialog?.inputRequired}
+        inputMinLength={confirmDialog?.inputMinLength}
         onConfirm={confirmDialog?.onConfirm || (() => {})}
         onCancel={() => setConfirmDialog(null)}
       />
