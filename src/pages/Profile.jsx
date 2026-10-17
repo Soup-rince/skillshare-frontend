@@ -13,7 +13,8 @@ import {
   FaUserShield,
   FaUserSlash,
   FaUserCheck,
-  FaBan
+  FaBan,
+  FaFlag
 } from "react-icons/fa";
 import {
   getUserProfile,
@@ -21,11 +22,13 @@ import {
   getMyReviewForUser,
   createReview,
   suspendUser,
-  unsuspendUser
+  unsuspendUser,
+  createUserReport
 } from "../api";
 import { useConfirm } from "../contexts/ConfirmContext";
 import StarRating from "../components/StarRating";
 import ReviewForm from "../components/ReviewForm";
+import ReportForm from "../components/ReportForm";
 
 function getInitials(name) {
   if (!name) return "?";
@@ -55,6 +58,7 @@ function formatMemberSince(dateStr) {
 }
 
 function formatDate(dateStr) {
+  if (!dateStr) return "";
   const d = new Date(dateStr);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
@@ -69,17 +73,29 @@ function Profile() {
   const [reviewsData, setReviewsData] = useState({ reviews: [], total: 0, average: 0 });
   const [myReview, setMyReview] = useState(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showReportForm, setShowReportForm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const token = localStorage.getItem("token");
   const myId = localStorage.getItem("userId");
   const isSuperAdmin = localStorage.getItem("role") === "super_admin";
+  const myRole = localStorage.getItem("role");
+
+  const validId = id && id !== "undefined" && id !== "null";
 
   const fetchProfile = async () => {
+    if (!validId) {
+      setError("User not found.");
+      setData(null);
+      return;
+    }
     try {
+      setError("");
       const res = await getUserProfile(id, token);
       setData(res.data);
-    } catch {
-      setError("User not found.");
+    } catch (err) {
+      const msg = err.response?.data?.message || "User not found.";
+      setError(msg);
+      setData(null);
     }
   };
 
@@ -88,26 +104,24 @@ function Profile() {
   }, [id, token]);
 
   useEffect(() => {
-    if (!id) return;
+    if (!validId) return;
     const fetchReviews = async () => {
       try {
         const res = await getUserReviews(id, token);
         setReviewsData(res.data);
       } catch {
-        // silent
       }
     };
     fetchReviews();
   }, [id, token]);
 
   useEffect(() => {
-    if (!id || id === myId) return;
+    if (!validId || id === myId) return;
     const fetchMyReview = async () => {
       try {
         const res = await getMyReviewForUser(id, token);
         setMyReview(res.data);
       } catch {
-        // silent
       }
     };
     fetchMyReview();
@@ -121,8 +135,12 @@ function Profile() {
     setShowReviewForm(false);
   };
 
+  const handleSubmitUserReport = async (payload) => {
+    await createUserReport(payload, token);
+  };
+
   const handleSuspendToggle = async () => {
-    if (!data) return;
+    if (!data || !data.user) return;
     const user = data.user;
 
     const action = user.isSuspended ? "Unsuspend" : "Suspend";
@@ -142,7 +160,7 @@ function Profile() {
       setActionLoading(true);
       setError("");
       if (user.isSuspended) {
-        await unsuspendUser(user._id, token);
+        await unsuspendUser(user._id, {}, token);
       } else {
         await suspendUser(
           user._id,
@@ -161,14 +179,18 @@ function Profile() {
   if (error) return <main className="page-container"><div className="empty-state"><h2>{error}</h2></div></main>;
   if (!data) return <main className="page-container"><div className="empty-state"><p>Loading profile...</p></div></main>;
 
-  const { user, posts, totalPosts } = data;
+  const { user, posts = [], totalPosts = 0 } = data;
+  if (!user) return <main className="page-container"><div className="empty-state"><h2>User not found.</h2></div></main>;
+
   const isOwnProfile = id === myId;
-  const offerCount = posts.filter((p) => p.postType === "offer").length;
-  const requestCount = posts.filter((p) => p.postType === "request").length;
+  const safePosts = Array.isArray(posts) ? posts : [];
+  const offerCount = safePosts.filter((p) => p.postType === "offer").length;
+  const requestCount = safePosts.filter((p) => p.postType === "request").length;
   const memberSince = formatMemberSince(user.createdAt);
   const hasInterests = user.interests && user.interests.length > 0;
   const hasHobbies = user.hobbies && user.hobbies.length > 0;
   const canSuspend = isSuperAdmin && !isOwnProfile && user.role !== "super_admin";
+  const canReport = !isOwnProfile && user.role !== "super_admin" && myRole === "member";
 
   return (
     <main className="page-container profile-page">
@@ -222,6 +244,16 @@ function Profile() {
                   <FaEnvelope aria-hidden="true" />
                   <span>Message</span>
                 </button>
+                {canReport && (
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    onClick={() => setShowReportForm(true)}
+                  >
+                    <FaFlag aria-hidden="true" />
+                    <span>Report</span>
+                  </button>
+                )}
                 {canSuspend && (
                   <button
                     className={user.isSuspended ? "button-secondary" : "button-danger"}
@@ -274,14 +306,14 @@ function Profile() {
 
       {activeTab === "posts" && (
         <section aria-label="Skill posts">
-          {posts.length === 0 ? (
+          {safePosts.length === 0 ? (
             <div className="empty-state">
               <h2>No posts yet</h2>
               <p>{isOwnProfile ? "Share your first skill to get started." : "This member has not shared any skills yet."}</p>
             </div>
           ) : (
             <div className="profile-post-feed">
-              {posts.map((post) => {
+              {safePosts.map((post) => {
                 const ownerName = user.name;
                 return (
                   <Link className="post-card" key={post._id} to={`/posts/${post._id}`}>
@@ -458,6 +490,15 @@ function Profile() {
         existingReview={myReview}
         onClose={() => setShowReviewForm(false)}
         onSubmit={handleSubmitReview}
+      />
+
+      <ReportForm
+        isOpen={showReportForm}
+        targetType="user"
+        targetId={id}
+        targetName={user.name}
+        onClose={() => setShowReportForm(false)}
+        onSubmit={handleSubmitUserReport}
       />
     </main>
   );

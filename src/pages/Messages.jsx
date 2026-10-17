@@ -180,8 +180,16 @@ function Messages() {
     setEditingMessageId(null);
     setEditingContent("");
     setOpenMenuId(null);
-    const res = await getConversation(partnerId, token);
-    setMessages(res.data);
+    try {
+      setError("");
+      const res = await getConversation(partnerId, token);
+      setMessages(res.data);
+    } catch (err) {
+      const msg = err.response?.data?.message || "We could not open this conversation.";
+      setError(msg);
+      setMessages([]);
+      setActivePartner(null);
+    }
   };
 
   const closeLightbox = () => {
@@ -199,11 +207,16 @@ function Messages() {
   useEffect(() => {
     const openPreselected = async () => {
       if (preselectedId && !activePartner) {
-        const res = await getUserProfile(preselectedId, token);
-        openConversation(preselectedId, res.data.user.name);
+        try {
+          const res = await getUserProfile(preselectedId, token);
+          await openConversation(preselectedId, res.data.user.name);
+        } catch (err) {
+          const msg = err.response?.data?.message || "This account is banned or not found.";
+          setError(msg);
+        }
       }
     };
-    openPreselected().catch(() => setError("We could not open this conversation."));
+    openPreselected();
   }, [preselectedId]);
 
   useEffect(() => {
@@ -452,7 +465,7 @@ function Messages() {
       await openConversation(activePartner.id, activePartner.name);
       await loadInbox();
     } catch (err) {
-      setError("Message could not be sent. Please try again.");
+      setError(err.response?.data?.message || "Message could not be sent. Please try again.");
     } finally {
       setUploading(false);
     }

@@ -20,14 +20,32 @@ function Register() {
     e.preventDefault();
     setError("");
 
-    if (name.trim().length < 2) {
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2) {
       setError("Name must be at least 2 characters long");
       return;
     }
 
+    if (trimmedName.length > 50) {
+      setError("Name must be at most 50 characters long");
+      return;
+    }
+
     const nameRegex = /^[a-zA-Z\s.'-]+$/;
-    if (!nameRegex.test(name.trim())) {
+    if (!nameRegex.test(trimmedName)) {
       setError("Name can only contain letters, spaces, and basic punctuation");
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError("Please provide a valid email address");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      setError("Please provide a valid email address (e.g. name@example.com)");
       return;
     }
 
@@ -37,9 +55,18 @@ function Register() {
       return;
     }
 
+    if (password.length > 128) {
+      setError("Password must be at most 128 characters long");
+      return;
+    }
+
     try {
-      await axios.post(`${API_URL}/auth/register`, { name, email, password });
-      navigate("/verify-code", { state: { email } });
+      await axios.post(`${API_URL}/auth/register`, {
+        name: trimmedName,
+        email: normalizedEmail,
+        password
+      });
+      navigate("/verify-code", { state: { email: normalizedEmail } });
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     }
@@ -63,11 +90,27 @@ function Register() {
             {error && <p className="alert">{error}</p>}
             <div className="field">
               <label htmlFor="register-name">Name</label>
-              <input id="register-name" placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} required />
+              <input
+                id="register-name"
+                type="text"
+                autoComplete="name"
+                placeholder="Your full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
             </div>
             <div className="field">
               <label htmlFor="register-email">Email address</label>
-              <input id="register-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <input
+                id="register-email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div className="field">
               <label htmlFor="register-password">Password</label>
@@ -75,6 +118,7 @@ function Register() {
                 <input
                   id="register-password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   placeholder="Create a password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

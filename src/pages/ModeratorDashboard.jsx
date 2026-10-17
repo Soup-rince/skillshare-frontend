@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { FaTrash, FaCheck, FaSearch, FaHistory } from "react-icons/fa";
+import { FaTrash, FaCheck, FaSearch, FaHistory, FaFlag, FaUser, FaFileAlt, FaShieldAlt } from "react-icons/fa";
 import {
   checkModerator,
   getSkillPosts,
@@ -21,6 +21,7 @@ function ModeratorDashboard() {
   const [reportActionId, setReportActionId] = useState("");
   const [postSearch, setPostSearch] = useState("");
   const [reportSearch, setReportSearch] = useState("");
+  const [reportTypeFilter, setReportTypeFilter] = useState("all");
   const [confirmDialog, setConfirmDialog] = useState(null);
 
   const token = localStorage.getItem("token");
@@ -87,12 +88,15 @@ function ModeratorDashboard() {
 
   const handleReportAction = (reportId, action) => {
     const report = reports.find((r) => r._id === reportId);
-    const postTitle = report?.post?.title || "the reported post";
+    const isUserReport = report?.targetType === "user";
+    const targetLabel = isUserReport
+      ? report?.targetUser?.name || "the reported user"
+      : report?.post?.title || "the reported post";
 
     if (action === "dismiss") {
       setConfirmDialog({
         title: "Dismiss this report?",
-        message: `The report on "${postTitle}" will be marked as dismissed. The post will remain visible.`,
+        message: `The report on "${targetLabel}" will be marked as dismissed. No action will be taken.`,
         confirmLabel: "Dismiss report",
         cancelLabel: "Cancel",
         tone: "info",
@@ -106,10 +110,7 @@ function ModeratorDashboard() {
           try {
             const res = await updateModeratorReportStatus(
               reportId,
-              {
-                status: "dismissed",
-                reason: reason || ""
-              },
+              { status: "dismissed", reason: reason || "" },
               token
             );
             setReports((current) =>
@@ -123,10 +124,10 @@ function ModeratorDashboard() {
           }
         }
       });
-    } else if (action === "delete") {
+    } else if (action === "delete" && !isUserReport) {
       setConfirmDialog({
         title: "Delete this post?",
-        message: `The post "${postTitle}" will be permanently deleted and the report will be resolved. This action cannot be undone.`,
+        message: `The post "${targetLabel}" will be permanently deleted and the report will be resolved. This action cannot be undone.`,
         confirmLabel: "Delete post",
         cancelLabel: "Cancel",
         tone: "danger",
@@ -142,10 +143,7 @@ function ModeratorDashboard() {
             await deletePost(report.post._id, { reason }, token);
             await updateModeratorReportStatus(
               reportId,
-              {
-                status: "resolved",
-                reason: reason
-              },
+              { status: "resolved", reason: reason },
               token
             );
             setPosts((current) =>
@@ -154,16 +152,74 @@ function ModeratorDashboard() {
             setReports((current) =>
               current.map((r) =>
                 r._id === reportId
-                  ? {
-                      ...r,
-                      status: "resolved",
-                      adminNote: reason
-                    }
+                  ? { ...r, status: "resolved", adminNote: reason }
                   : r
               )
             );
           } catch (err) {
             setError(err.response?.data?.message || "Unable to update this report.");
+          } finally {
+            setReportActionId("");
+            setConfirmDialog(null);
+          }
+        }
+      });
+    } else if (action === "resolve_user") {
+      setConfirmDialog({
+        title: "Warn this user?",
+        message: `The report on "${targetLabel}" will be marked as resolved. The user will receive a warning notification.`,
+        confirmLabel: "Send warning",
+        cancelLabel: "Cancel",
+        tone: "info",
+        inputLabel: "Message to user (optional)",
+        inputPlaceholder: "e.g. Please review our community guidelines",
+        inputRequired: false,
+        inputMinLength: 0,
+        onConfirm: async (reason) => {
+          setReportActionId(reportId);
+          setError("");
+          try {
+            const res = await updateModeratorReportStatus(
+              reportId,
+              { status: "resolved", reason: reason || "" },
+              token
+            );
+            setReports((current) =>
+              current.map((r) => (r._id === reportId ? { ...r, ...res.data } : r))
+            );
+          } catch (err) {
+            setError(err.response?.data?.message || "Unable to update this report.");
+          } finally {
+            setReportActionId("");
+            setConfirmDialog(null);
+          }
+        }
+      });
+    } else if (action === "escalate") {
+      setConfirmDialog({
+        title: "Escalate this report to admin?",
+        message: `The report on "${targetLabel}" will be flagged for admin review. The admin team will decide whether to suspend the user. The reported user will NOT receive a warning.`,
+        confirmLabel: "Escalate",
+        cancelLabel: "Cancel",
+        tone: "danger",
+        inputLabel: "Note for admin (optional)",
+        inputPlaceholder: "e.g. Multiple reports, repeated violations",
+        inputRequired: false,
+        inputMinLength: 0,
+        onConfirm: async (reason) => {
+          setReportActionId(reportId);
+          setError("");
+          try {
+            const res = await updateModeratorReportStatus(
+              reportId,
+              { status: "escalated", reason: reason || "" },
+              token
+            );
+            setReports((current) =>
+              current.map((r) => (r._id === reportId ? { ...r, ...res.data } : r))
+            );
+          } catch (err) {
+            setError(err.response?.data?.message || "Unable to escalate this report.");
           } finally {
             setReportActionId("");
             setConfirmDialog(null);
@@ -184,21 +240,35 @@ function ModeratorDashboard() {
   }, [posts, postSearch]);
 
   const filteredReports = useMemo(() => {
+    let list = reports;
+
+    if (reportTypeFilter === "posts") {
+      list = list.filter((r) => r.targetType !== "user");
+    } else if (reportTypeFilter === "users") {
+      list = list.filter((r) => r.targetType === "user");
+    }
+
     const q = reportSearch.trim().toLowerCase();
-    if (!q) return reports;
-    return reports.filter((report) => {
-      const postTitle = (report.post?.title || "").toLowerCase();
-      const postOwner = (report.post?.owner?.name || "").toLowerCase();
+    if (!q) return list;
+
+    return list.filter((report) => {
+      const isUser = report.targetType === "user";
+      const targetLabel = isUser
+        ? (report.targetUser?.name || "").toLowerCase()
+        : (report.post?.title || "").toLowerCase();
+      const owner = isUser
+        ? (report.targetUser?.email || "").toLowerCase()
+        : (report.post?.owner?.name || "").toLowerCase();
       const reporter = (report.reporter?.name || "").toLowerCase();
       const reason = (report.reason || "").toLowerCase();
       return (
-        postTitle.includes(q) ||
-        postOwner.includes(q) ||
+        targetLabel.includes(q) ||
+        owner.includes(q) ||
         reporter.includes(q) ||
         reason.includes(q)
       );
     });
-  }, [reports, reportSearch]);
+  }, [reports, reportSearch, reportTypeFilter]);
 
   if (accessGranted === null) {
     return (
@@ -223,6 +293,8 @@ function ModeratorDashboard() {
   }
 
   const pendingCount = reports.filter((r) => r.status === "pending").length;
+  const userReportCount = reports.filter((r) => r.targetType === "user").length;
+  const postReportCount = reports.filter((r) => r.targetType !== "user").length;
 
   return (
     <main className="page-container">
@@ -313,26 +385,17 @@ function ModeratorDashboard() {
                   <div>
                     <div className="tag-row">
                       <span
-                        className={`tag ${
-                          post.postType === "offer"
-                            ? "tag-offer"
-                            : "tag-request"
-                        }`}
+                        className={`tag ${post.postType === "offer" ? "tag-offer" : "tag-request"}`}
                       >
                         {post.postType}
                       </span>
-
                       <span className="tag tag-neutral">{post.category}</span>
                     </div>
-
                     <h3>{post.title}</h3>
-
                     <p>
-                      By {post.owner?.name || "Unknown member"} ·{" "}
-                      {post.proficiencyLevel}
+                      By {post.owner?.name || "Unknown member"} · {post.proficiencyLevel}
                     </p>
                   </div>
-
                   <div className="admin-post-actions">
                     <Link className="button-secondary" to={`/posts/${post._id}`}>
                       View details
@@ -359,10 +422,34 @@ function ModeratorDashboard() {
             <FaSearch className="admin-search-icon" aria-hidden="true" />
             <input
               type="text"
-              placeholder="Search reports by post, owner, reporter, or reason"
+              placeholder="Search reports by target, reporter, or reason"
               value={reportSearch}
               onChange={(e) => setReportSearch(e.target.value)}
             />
+          </div>
+
+          <div className="report-type-tabs">
+            <button
+              type="button"
+              className={`report-type-tab ${reportTypeFilter === "all" ? "active" : ""}`}
+              onClick={() => setReportTypeFilter("all")}
+            >
+              All ({reports.length})
+            </button>
+            <button
+              type="button"
+              className={`report-type-tab ${reportTypeFilter === "posts" ? "active" : ""}`}
+              onClick={() => setReportTypeFilter("posts")}
+            >
+              <FaFileAlt /> Posts ({postReportCount})
+            </button>
+            <button
+              type="button"
+              className={`report-type-tab ${reportTypeFilter === "users" ? "active" : ""}`}
+              onClick={() => setReportTypeFilter("users")}
+            >
+              <FaUser /> Users ({userReportCount})
+            </button>
           </div>
 
           <div className="admin-section-title">
@@ -380,12 +467,14 @@ function ModeratorDashboard() {
             </div>
           ) : filteredReports.length === 0 ? (
             <div className="empty-state">
-              <p>No reports match your search.</p>
+              <p>No reports match your filter.</p>
             </div>
           ) : (
             <div className="admin-post-list">
               {filteredReports.map((report) => {
                 const isPending = report.status === "pending";
+                const isUserReport = report.targetType === "user";
+
                 return (
                   <article className="admin-report-row" key={report._id}>
                     <div className="admin-report-info">
@@ -394,19 +483,36 @@ function ModeratorDashboard() {
                           {report.status}
                         </span>
                         <span className="tag tag-danger">{report.reason}</span>
+                        <span className={`tag ${isUserReport ? "tag-user-report" : "tag-post-report"}`}>
+                          {isUserReport ? <><FaUser /> User</> : <><FaFileAlt /> Post</>}
+                        </span>
+                        {report.status === "escalated" && (
+                          <span className="tag tag-escalated">
+                            <FaShieldAlt /> Escalated
+                          </span>
+                        )}
                       </div>
 
-                      <h3>{report.post?.title || "Deleted post"}</h3>
-
-                      <p>
-                        By {report.post?.owner?.name || "Unknown member"} · reported by{" "}
-                        {report.reporter?.name || "Unknown"}
-                      </p>
+                      {isUserReport ? (
+                        <>
+                          <h3>{report.targetUser?.name || "Deleted user"}</h3>
+                          <p>
+                            {report.targetUser?.email || "No email"} · reported by{" "}
+                            {report.reporter?.name || "Unknown"}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <h3>{report.post?.title || "Deleted post"}</h3>
+                          <p>
+                            By {report.post?.owner?.name || "Unknown member"} · reported by{" "}
+                            {report.reporter?.name || "Unknown"}
+                          </p>
+                        </>
+                      )}
 
                       {report.details && (
-                        <p className="admin-report-details">
-                          "{report.details}"
-                        </p>
+                        <p className="admin-report-details">"{report.details}"</p>
                       )}
 
                       {report.adminNote && (
@@ -416,22 +522,52 @@ function ModeratorDashboard() {
                       )}
                     </div>
 
-                    {report.post?._id && (
-                      <div className="admin-report-actions">
-                        <Link className="button-secondary" to={`/posts/${report.post._id}`}>
-                          View details
+                    <div className="admin-report-actions">
+                      {isUserReport ? (
+                        <Link className="button-secondary" to={`/profile/${report.targetUser?._id}`}>
+                          View profile
                         </Link>
-                        {isPending && (
-                          <>
-                            <button
-                              className="button-secondary"
-                              type="button"
-                              onClick={() => handleReportAction(report._id, "dismiss")}
-                              disabled={reportActionId === report._id}
-                            >
-                              <FaCheck aria-hidden="true" />
-                              <span>Dismiss</span>
-                            </button>
+                      ) : (
+                        report.post?._id && (
+                          <Link className="button-secondary" to={`/posts/${report.post._id}`}>
+                            View details
+                          </Link>
+                        )
+                      )}
+
+                      {isPending && (
+                        <>
+                          <button
+                            className="button-secondary"
+                            type="button"
+                            onClick={() => handleReportAction(report._id, "dismiss")}
+                            disabled={reportActionId === report._id}
+                          >
+                            <FaCheck aria-hidden="true" />
+                            <span>Dismiss</span>
+                          </button>
+                          {isUserReport ? (
+                            <>
+                              <button
+                                className="button"
+                                type="button"
+                                onClick={() => handleReportAction(report._id, "resolve_user")}
+                                disabled={reportActionId === report._id}
+                              >
+                                <FaFlag aria-hidden="true" />
+                                <span>Warn</span>
+                              </button>
+                              <button
+                                className="button-danger"
+                                type="button"
+                                onClick={() => handleReportAction(report._id, "escalate")}
+                                disabled={reportActionId === report._id}
+                              >
+                                <FaShieldAlt aria-hidden="true" />
+                                <span>Escalate</span>
+                              </button>
+                            </>
+                          ) : (
                             <button
                               className="button-danger"
                               type="button"
@@ -441,10 +577,10 @@ function ModeratorDashboard() {
                               <FaTrash aria-hidden="true" />
                               <span>Delete post</span>
                             </button>
-                          </>
-                        )}
-                      </div>
-                    )}
+                          )}
+                        </>
+                      )}
+                    </div>
                   </article>
                 );
               })}

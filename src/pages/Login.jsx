@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
+import TermsModal from "../components/TermsModal";
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -13,40 +14,70 @@ function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [suspendedMessage, setSuspendedMessage] = useState("");
+  const [showTerms, setShowTerms] = useState(false);
+  const [termsLoading, setTermsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const successMessage = location.state?.message;
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("suspended") === "1") {
+      const msg = params.get("message");
+      if (msg) {
+        setSuspendedMessage(msg);
+      }
+    }
+  }, [location.search]);
+
+  const finishLogin = (data) => {
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("userId", data._id);
+    localStorage.setItem("role", data.role);
+    localStorage.setItem("userName", data.name);
+
+    if (data.hasSeenWelcome === false) {
+      navigate("/getting-started");
+    } else {
+      navigate("/browse");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setUnverifiedEmail("");
+    setSuspendedMessage("");
     try {
       const res = await axios.post(`${API_URL}/auth/login`, { email, password });
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("userId", res.data._id);
-      localStorage.setItem("role", res.data.role);
-      localStorage.setItem("userName", res.data.name);
-
-      if (res.data.hasSeenWelcome === false) {
-        navigate("/getting-started");
-      } else {
-        navigate("/browse");
-      }
+      finishLogin(res.data);
     } catch (err) {
       const data = err.response?.data;
-      if (data?.code === "EMAIL_NOT_VERIFIED") {
-        setUnverifiedEmail(data.email || email);
-        setError(data.message);
+      if (data?.code === "TERMS_REQUIRED") {
+        setShowTerms(true);
+      } else if (data?.code === "ACCOUNT_SUSPENDED" || (data?.message || "").toLowerCase().includes("suspended")) {
+        const reasonText = data?.reason ? ` Reason: ${data.reason}` : "";
+        setSuspendedMessage(`Your account has been suspended.${reasonText}`);
       } else {
         setError(data?.message || "Login failed");
       }
     }
   };
 
-  const handleEnterCode = () => {
-    navigate("/verify-code", { state: { email: unverifiedEmail } });
+  const handleAcceptTerms = async () => {
+    try {
+      setTermsLoading(true);
+      setError("");
+      const res = await axios.post(`${API_URL}/auth/accept-terms`, { email, password });
+      setShowTerms(false);
+      finishLogin(res.data);
+    } catch (err) {
+      const data = err.response?.data;
+      setError(data?.message || "Could not accept terms. Please try again.");
+      setShowTerms(false);
+    } finally {
+      setTermsLoading(false);
+    }
   };
 
   return (
@@ -65,21 +96,13 @@ function Login() {
           <p>Enter your details to continue your learning journey.</p>
           <form className="form-stack" onSubmit={handleSubmit}>
             {successMessage && <p className="alert" style={{ background: "#eaf3de", color: "#3b6d11" }}>{successMessage}</p>}
-            {error && (
-              <div className="alert">
-                <p style={{ margin: 0 }}>{error}</p>
-                {unverifiedEmail && (
-                  <button
-                    type="button"
-                    className="button-secondary button-small"
-                    onClick={handleEnterCode}
-                    style={{ marginTop: 10, width: "100%" }}
-                  >
-                    Enter verification code
-                  </button>
-                )}
+            {suspendedMessage && (
+              <div className="alert" style={{ background: "#fff2f4", borderColor: "#ffd7dc", color: "#ad2438" }}>
+                <p style={{ margin: 0, fontWeight: 700 }}>Account Suspended</p>
+                <p style={{ margin: "4px 0 0", fontSize: "0.82rem", lineHeight: 1.5 }}>{suspendedMessage}</p>
               </div>
             )}
+            {error && <p className="alert">{error}</p>}
             <div className="field">
               <label htmlFor="login-email">Email address</label>
               <input id="login-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -124,6 +147,13 @@ function Login() {
           <p className="form-note">New to SkillShare? <Link to="/register">Create an account</Link></p>
         </div>
       </main>
+
+      <TermsModal
+        isOpen={showTerms}
+        onAccept={handleAcceptTerms}
+        onClose={() => setShowTerms(false)}
+        loading={termsLoading}
+      />
     </div>
   );
 }

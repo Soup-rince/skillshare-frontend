@@ -149,13 +149,17 @@ function ModeratorManagementTab() {
   const handleUnsuspend = (user) => {
     setConfirmDialog({
       title: "Unsuspend moderator",
-      message: `Restore access for ${user.name}?`,
+      message: `Restore access for ${user.name}? They will be notified with the reason below.`,
       confirmLabel: "Unsuspend",
       tone: "info",
-      onConfirm: async () => {
+      inputLabel: "Reason for unsuspension (optional)",
+      inputPlaceholder: "e.g. Appeal accepted, investigation cleared",
+      inputRequired: false,
+      inputMinLength: 0,
+      onConfirm: async (reason) => {
         setActionId(user._id);
         try {
-          await unsuspendModerator(user._id, token);
+          await unsuspendModerator(user._id, { reason }, token);
           await loadModerators();
         } catch (err) {
           setError(err.response?.data?.message || "Could not unsuspend moderator.");

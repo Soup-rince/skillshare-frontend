@@ -6,6 +6,32 @@ const API_URL =
     ? "http://localhost:5000/api"
     : "https://skillshare-backend-1qq5.onrender.com/api");
 
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const data = error.response?.data;
+
+    if (status === 403 && data?.code === "ACCOUNT_SUSPENDED") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userName");
+
+      const isAuthPage = ["/login", "/register"].includes(window.location.pathname);
+      if (!isAuthPage) {
+        const message = data?.reason
+          ? `Your account has been suspended. Reason: ${data.reason}`
+          : "Your account has been suspended. Please contact the administrator.";
+
+        window.location.href = `/login?suspended=1&message=${encodeURIComponent(message)}`;
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export const login = (credentials) => axios.post(`${API_URL}/auth/login`, credentials);
 
 export const sendMessage = (data, token) =>
@@ -149,8 +175,8 @@ export const suspendUser = (id, data, token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-export const unsuspendUser = (id, token) =>
-  axios.patch(`${API_URL}/admin/users/${id}/unsuspend`, {}, {
+export const unsuspendUser = (id, data, token) =>
+  axios.patch(`${API_URL}/admin/users/${id}/unsuspend`, data || {}, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
@@ -319,7 +345,7 @@ export const deleteAnnouncement = (id, token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const getModeratorReports = (params, token) =>
+export const getModeratorReports = (params, token) =>
   axios.get(`${API_URL}/moderator/reports`, {
     params,
     headers: { Authorization: `Bearer ${token}` }
@@ -330,7 +356,7 @@ export const updateModeratorReportStatus = (id, data, token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const getModeratorMyActivity = (params, token) =>
+export const getModeratorMyActivity = (params, token) =>
   axios.get(`${API_URL}/moderator/my-activity`, {
     params,
     headers: { Authorization: `Bearer ${token}` }
@@ -343,12 +369,12 @@ export const exportModeratorMyActivity = (params, token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const getAllModerators = (token) =>
+export const getAllModerators = (token) =>
   axios.get(`${API_URL}/superadmin/moderators`, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const getAdminAuditLogs = (params, token) =>
+export const getAdminAuditLogs = (params, token) =>
   axios.get(`${API_URL}/superadmin/admin-audit-logs`, {
     params,
     headers: { Authorization: `Bearer ${token}` }
@@ -366,8 +392,8 @@ export const suspendModerator = (id, data, token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-export const unsuspendModerator = (id, token) =>
-  axios.patch(`${API_URL}/superadmin/moderators/${id}/unsuspend`, {}, {
+export const unsuspendModerator = (id, data, token) =>
+  axios.patch(`${API_URL}/superadmin/moderators/${id}/unsuspend`, data || {}, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
@@ -376,7 +402,20 @@ export const suspendAdmin = (id, data, token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-export const unsuspendAdmin = (id, token) =>
-  axios.patch(`${API_URL}/superadmin/admins/${id}/unsuspend`, {}, {
+export const unsuspendAdmin = (id, data, token) =>
+  axios.patch(`${API_URL}/superadmin/admins/${id}/unsuspend`, data || {}, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
+  export const createUserReport = (data, token) =>
+  axios.post(`${API_URL}/reports/user`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  export const getEscalatedReports = (token) =>
+  axios.get(`${API_URL}/admin/users/escalated-reports`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  export const acceptTerms = (data) =>
+  axios.post(`${API_URL}/auth/accept-terms`, data);

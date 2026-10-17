@@ -29,6 +29,8 @@ const REASON_LABELS = {
   inappropriate: "Inappropriate or offensive content",
   harassment: "Harassment or hate speech",
   misinformation: "Misinformation or misleading content",
+  fake_account: "Fake or impersonating account",
+  underage: "Suspected underage user",
   other: "Other"
 };
 
@@ -58,22 +60,31 @@ function NotificationDetailModal({ notification, onClose, onNavigate }) {
               <div className="ndm-header-icon" style={{ color: "#ad2438", background: "#fff2f4" }}>
                 <FaFlag />
               </div>
-              <h2>Post Reported</h2>
+              <h2>{metadata.targetType === 'user' ? 'User Reported' : 'Post Reported'}</h2>
             </div>
             <div className="ndm-body">
               <div className="ndm-row">
                 <span className="ndm-label">Reason</span>
                 <span className="ndm-value">{REASON_LABELS[metadata.reason] || metadata.reason || "Not specified"}</span>
               </div>
-              <div className="ndm-row">
-                <span className="ndm-label">Post</span>
-                <span className="ndm-value">"{metadata.postTitle || "Untitled"}"</span>
-              </div>
-              {metadata.postDescription && (
-                <div className="ndm-block">
-                  <span className="ndm-label">Post description</span>
-                  <p className="ndm-details">{metadata.postDescription}</p>
+              {metadata.targetType === 'user' ? (
+                <div className="ndm-row">
+                  <span className="ndm-label">User</span>
+                  <span className="ndm-value">{metadata.targetUserName || "Unknown"}</span>
                 </div>
+              ) : (
+                <>
+                  <div className="ndm-row">
+                    <span className="ndm-label">Post</span>
+                    <span className="ndm-value">"{metadata.postTitle || "Untitled"}"</span>
+                  </div>
+                  {metadata.postDescription && (
+                    <div className="ndm-block">
+                      <span className="ndm-label">Post description</span>
+                      <p className="ndm-details">{metadata.postDescription}</p>
+                    </div>
+                  )}
+                </>
               )}
               {metadata.details && (
                 <div className="ndm-block">
@@ -92,7 +103,7 @@ function NotificationDetailModal({ notification, onClose, onNavigate }) {
               <div className="ndm-header-icon" style={{ color: "#166534", background: "#dcfce7" }}>
                 <FaCheck />
               </div>
-              <h2>Report {metadata.status === 'resolved' ? 'Resolved' : 'Reviewed'}</h2>
+              <h2>Report {metadata.status === 'resolved' ? 'Resolved' : metadata.status === 'escalated' ? 'Escalated' : 'Reviewed'}</h2>
             </div>
             <div className="ndm-body">
               <div className="ndm-row">
@@ -102,8 +113,12 @@ function NotificationDetailModal({ notification, onClose, onNavigate }) {
                 </span>
               </div>
               <div className="ndm-row">
-                <span className="ndm-label">Post</span>
-                <span className="ndm-value">"{metadata.postTitle || "Untitled"}"</span>
+                <span className="ndm-label">Target</span>
+                <span className="ndm-value">
+                  {metadata.targetType === 'user'
+                    ? metadata.targetUserName || "User"
+                    : `"${metadata.postTitle || "Untitled"}"`}
+                </span>
               </div>
               {metadata.adminNote && (
                 <div className="ndm-block">
@@ -129,10 +144,7 @@ function NotificationDetailModal({ notification, onClose, onNavigate }) {
                 <span className="ndm-label">Rating</span>
                 <span className="ndm-value ndm-stars">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <FaStar
-                      key={i}
-                      style={{ color: i < (metadata.rating || 0) ? "#f59e0b" : "#d1d5e0" }}
-                    />
+                    <FaStar key={i} style={{ color: i < (metadata.rating || 0) ? "#f59e0b" : "#d1d5e0" }} />
                   ))}
                   <span className="ndm-rating-num">{metadata.rating || 0}/5</span>
                 </span>
@@ -172,6 +184,86 @@ function NotificationDetailModal({ notification, onClose, onNavigate }) {
               <div className="ndm-row">
                 <span className="ndm-label">Date</span>
                 <span className="ndm-value">{formatDate(metadata.suspendedAt)}</span>
+              </div>
+            </div>
+          </>
+        );
+
+      case 'warning':
+        return (
+          <>
+            <div className="ndm-header">
+              <div className="ndm-header-icon" style={{ color: "#d97706", background: "#fef3c7" }}>
+                <FaFlag />
+              </div>
+              <h2>Warning</h2>
+            </div>
+            <div className="ndm-body">
+              <div className="ndm-row">
+                <span className="ndm-label">Reason</span>
+                <span className="ndm-value">{REASON_LABELS[metadata.reason] || metadata.reason || "Not specified"}</span>
+              </div>
+              {metadata.details && (
+                <div className="ndm-block">
+                  <span className="ndm-label">Additional details</span>
+                  <p className="ndm-details">{metadata.details}</p>
+                </div>
+              )}
+              <div className="ndm-block">
+                <span className="ndm-label">Message</span>
+                <p className="ndm-details">{message || "Please follow our community guidelines."}</p>
+              </div>
+              {metadata.warnedBy && (
+                <div className="ndm-row">
+                  <span className="ndm-label">Issued by</span>
+                  <span className="ndm-value">{metadata.warnedBy}</span>
+                </div>
+              )}
+              <div className="ndm-row">
+                <span className="ndm-label">Date</span>
+                <span className="ndm-value">{formatDate(metadata.warnedAt)}</span>
+              </div>
+            </div>
+          </>
+        );
+
+      case 'user_flagged':
+        return (
+          <>
+            <div className="ndm-header">
+              <div className="ndm-header-icon" style={{ color: "#dc2626", background: "#fee2e2" }}>
+                <FaShieldAlt />
+              </div>
+              <h2>User Escalated for Review</h2>
+            </div>
+            <div className="ndm-body">
+              <div className="ndm-row">
+                <span className="ndm-label">User</span>
+                <span className="ndm-value">{metadata.targetUserName || "Unknown"}</span>
+              </div>
+              {metadata.targetUserEmail && (
+                <div className="ndm-row">
+                  <span className="ndm-label">Email</span>
+                  <span className="ndm-value">{metadata.targetUserEmail}</span>
+                </div>
+              )}
+              <div className="ndm-row">
+                <span className="ndm-label">Report reason</span>
+                <span className="ndm-value">{REASON_LABELS[metadata.reason] || metadata.reason || "Not specified"}</span>
+              </div>
+              {metadata.details && (
+                <div className="ndm-block">
+                  <span className="ndm-label">Reporter's note</span>
+                  <p className="ndm-details">{metadata.details}</p>
+                </div>
+              )}
+              <div className="ndm-row">
+                <span className="ndm-label">Escalated by</span>
+                <span className="ndm-value">{metadata.escalatedBy || "Moderator"}</span>
+              </div>
+              <div className="ndm-row">
+                <span className="ndm-label">Date</span>
+                <span className="ndm-value">{formatDate(metadata.escalatedAt)}</span>
               </div>
             </div>
           </>

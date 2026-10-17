@@ -150,13 +150,17 @@ function AdminManagementTab() {
   const handleUnsuspend = (user) => {
     setConfirmDialog({
       title: "Unsuspend admin",
-      message: `Restore access for ${user.name}?`,
+      message: `Restore access for ${user.name}? They will be notified with the reason below.`,
       confirmLabel: "Unsuspend",
       tone: "info",
-      onConfirm: async () => {
+      inputLabel: "Reason for unsuspension (optional)",
+      inputPlaceholder: "e.g. Appeal accepted, investigation cleared",
+      inputRequired: false,
+      inputMinLength: 0,
+      onConfirm: async (reason) => {
         setActionId(user._id);
         try {
-          await unsuspendAdmin(user._id, token);
+          await unsuspendAdmin(user._id, { reason }, token);
           await loadAdmins();
         } catch (err) {
           setError(err.response?.data?.message || "Could not unsuspend admin.");

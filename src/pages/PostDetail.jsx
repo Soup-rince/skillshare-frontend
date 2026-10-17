@@ -172,7 +172,9 @@ function PostDetail() {
 
       <ReportForm
         isOpen={showReportForm}
-        postId={id}
+        targetType="post"
+        targetId={id}
+        targetName={post.title}
         onClose={() => setShowReportForm(false)}
         onSubmit={handleReport}
       />

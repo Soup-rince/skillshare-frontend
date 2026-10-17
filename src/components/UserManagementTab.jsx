@@ -89,10 +89,14 @@ function UserManagementTab() {
       message: `Suspend ${user.name}? They will not be able to log in.`,
       confirmLabel: "Suspend",
       tone: "danger",
-      onConfirm: async () => {
+      inputLabel: "Reason for suspension",
+      inputPlaceholder: "e.g. Violation of community guidelines",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
         setActionId(user._id);
         try {
-          await suspendUser(user._id, { reason: "Violation of community guidelines" }, token);
+          await suspendUser(user._id, { reason }, token);
           await loadUsers();
         } catch (err) {
           setError(err.response?.data?.message || "Could not suspend user.");
@@ -107,13 +111,17 @@ function UserManagementTab() {
   const handleUnsuspend = (user) => {
     setConfirmDialog({
       title: "Unsuspend user",
-      message: `Restore access for ${user.name}?`,
+      message: `Restore access for ${user.name}? They will be notified with the reason below.`,
       confirmLabel: "Unsuspend",
       tone: "info",
-      onConfirm: async () => {
+      inputLabel: "Reason for unsuspension (optional)",
+      inputPlaceholder: "e.g. Appeal accepted, warning issued",
+      inputRequired: false,
+      inputMinLength: 0,
+      onConfirm: async (reason) => {
         setActionId(user._id);
         try {
-          await unsuspendUser(user._id, token);
+          await unsuspendUser(user._id, { reason }, token);
           await loadUsers();
         } catch (err) {
           setError(err.response?.data?.message || "Could not unsuspend user.");

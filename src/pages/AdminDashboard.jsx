@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import { FaUsers, FaHistory, FaClipboardList } from "react-icons/fa";
-import { checkAdmin } from "../api";
+import { FaUsers, FaHistory, FaClipboardList, FaShieldAlt } from "react-icons/fa";
+import { checkAdmin, getEscalatedReports } from "../api";
 import UserManagementTab from "../components/UserManagementTab";
 import MyActivityTab from "../components/MyActivityTab";
 import AdminAuditLogTab from "../components/AdminAuditLogTab";
+import EscalatedReportsTab from "../components/EscalatedReportsTab";
 
 function AdminDashboard() {
   const [accessGranted, setAccessGranted] = useState(null);
   const [activeTab, setActiveTab] = useState("users");
   const [error, setError] = useState("");
+  const [escalatedCount, setEscalatedCount] = useState(0);
 
   const token = localStorage.getItem("token");
 
@@ -17,6 +19,11 @@ function AdminDashboard() {
       try {
         await checkAdmin(token);
         setAccessGranted(true);
+        try {
+          const escRes = await getEscalatedReports(token);
+          setEscalatedCount(escRes.data.length || 0);
+        } catch {
+        }
       } catch (err) {
         setAccessGranted(false);
         setError(
@@ -77,6 +84,17 @@ function AdminDashboard() {
         </button>
         <button
           type="button"
+          className={`admin-tab ${activeTab === "escalated" ? "active" : ""}`}
+          onClick={() => setActiveTab("escalated")}
+        >
+          <FaShieldAlt aria-hidden="true" />
+          <span>Escalated</span>
+          {escalatedCount > 0 && (
+            <span className="admin-tab-badge">{escalatedCount}</span>
+          )}
+        </button>
+        <button
+          type="button"
           className={`admin-tab ${activeTab === "audit" ? "active" : ""}`}
           onClick={() => setActiveTab("audit")}
         >
@@ -94,6 +112,8 @@ function AdminDashboard() {
       </div>
 
       {activeTab === "users" && <UserManagementTab />}
+
+      {activeTab === "escalated" && <EscalatedReportsTab />}
 
       {activeTab === "audit" && <AdminAuditLogTab />}
 

@@ -5,7 +5,7 @@ import { verifyCode, resendVerification } from "../api";
 function VerifyCode() {
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email || "";
+  const email = (location.state?.email || "").trim().toLowerCase();
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -73,28 +73,28 @@ function VerifyCode() {
   const code = digits.join("");
 
   useEffect(() => {
-    if (code.length === 6) {
-      handleVerify();
-    }
-  }, [code]);
-
-  const handleVerify = async () => {
     if (code.length !== 6 || verifying) return;
-    try {
-      setVerifying(true);
-      setError("");
-      await verifyCode(email, code);
-      navigate("/login", {
-        state: { message: "Email verified! You can now log in." }
-      });
-    } catch (err) {
-      setError(err.response?.data?.message || "Verification failed.");
-      setDigits(["", "", "", "", "", ""]);
-      inputRefs.current[0]?.focus();
-    } finally {
-      setVerifying(false);
-    }
-  };
+
+    const doVerify = async () => {
+      try {
+        setVerifying(true);
+        setError("");
+        await verifyCode(email, code);
+        navigate("/login", {
+          state: { message: "Email verified! You can now log in." }
+        });
+      } catch (err) {
+        setError(err.response?.data?.message || "Verification failed.");
+        setDigits(["", "", "", "", "", ""]);
+        inputRefs.current[0]?.focus();
+      } finally {
+        setVerifying(false);
+      }
+    };
+
+    doVerify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
 
   const handleResend = async () => {
     if (cooldown > 0) return;
@@ -150,6 +150,7 @@ function VerifyCode() {
                   ref={(el) => (inputRefs.current[i] = el)}
                   type="text"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleDigitChange(i, e.target.value)}

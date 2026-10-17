@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FaTimes, FaFlag } from "react-icons/fa";
 
-const REASONS = [
+const POST_REASONS = [
   { value: "spam", label: "Spam or repetitive content" },
   { value: "inappropriate", label: "Inappropriate or offensive content" },
   { value: "harassment", label: "Harassment or hate speech" },
@@ -9,7 +9,16 @@ const REASONS = [
   { value: "other", label: "Other (please specify)" },
 ];
 
-function ReportForm({ isOpen, postId, onClose, onSubmit }) {
+const USER_REASONS = [
+  { value: "fake_account", label: "Fake or impersonating account" },
+  { value: "harassment", label: "Harassment or abusive behavior" },
+  { value: "spam", label: "Spam or scam activity" },
+  { value: "inappropriate", label: "Inappropriate profile content" },
+  { value: "underage", label: "Suspected underage user" },
+  { value: "other", label: "Other (please specify)" },
+];
+
+function ReportForm({ isOpen, targetType = "post", targetId, targetName, onClose, onSubmit }) {
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
   const [error, setError] = useState("");
@@ -17,6 +26,13 @@ function ReportForm({ isOpen, postId, onClose, onSubmit }) {
   const [success, setSuccess] = useState(false);
 
   if (!isOpen) return null;
+
+  const isUser = targetType === "user";
+  const reasons = isUser ? USER_REASONS : POST_REASONS;
+  const headerTitle = isUser ? "Report this user" : "Report this post";
+  const headerSubtitle = isUser
+    ? "Help us keep SkillShare safe. Your report is anonymous to the user."
+    : "Help us keep SkillShare safe. Your report is anonymous to the post owner.";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,7 +50,10 @@ function ReportForm({ isOpen, postId, onClose, onSubmit }) {
 
     try {
       setSubmitting(true);
-      await onSubmit({ post: postId, reason, details: details.trim() });
+      const payload = isUser
+        ? { userId: targetId, reason, details: details.trim() }
+        : { post: targetId, reason, details: details.trim() };
+      await onSubmit(payload);
       setSuccess(true);
       setTimeout(() => {
         onClose();
@@ -70,15 +89,15 @@ function ReportForm({ isOpen, postId, onClose, onSubmit }) {
               <div className="report-header-icon">
                 <FaFlag />
               </div>
-              <h2>Report this post</h2>
-              <p>Help us keep SkillShare safe. Your report is anonymous to the post owner.</p>
+              <h2>{headerTitle}</h2>
+              <p>{headerSubtitle}</p>
             </header>
 
             <form className="report-form" onSubmit={handleSubmit}>
               {error && <p className="alert">{error}</p>}
 
               <div className="report-reasons">
-                {REASONS.map((r) => (
+                {reasons.map((r) => (
                   <label
                     key={r.value}
                     className={`report-reason ${reason === r.value ? "selected" : ""}`}

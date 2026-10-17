@@ -106,8 +106,8 @@ function Browse() {
         setMembersLoading(true);
         setMembersError("");
         const res = await searchUsers(memberQuery, membersPage, 12, token);
-        setMembers(res.data.users || []);
-        setMembersTotalPages(res.data.pages || 1);
+        setMembers(res.data.data || []);
+        setMembersTotalPages(res.data.totalPages || 1);
       } catch {
         setMembersError("We could not load members. Please try again.");
         setMembers([]);

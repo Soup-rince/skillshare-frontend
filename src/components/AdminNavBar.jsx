@@ -47,9 +47,15 @@ function AdminNavBar() {
 
     const interval = setInterval(fetchCounts, 30000);
 
+    const handleFocus = () => {
+      fetchCounts();
+    };
+    window.addEventListener("focus", handleFocus);
+
     return () => {
       cancelled = true;
       clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
     };
   }, [token, location.pathname]);
 
