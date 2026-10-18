@@ -419,3 +419,14 @@ export const unsuspendAdmin = (id, data, token) =>
 
   export const acceptTerms = (data) =>
   axios.post(`${API_URL}/auth/accept-terms`, data);
+
+  export const createMessageReport = (data, token) =>
+  axios.post(`${API_URL}/reports/message`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  export const deleteMessageByModerator = (id, data, token) =>
+  axios.delete(`${API_URL}/moderator/messages/${id}`, {
+    data: data || {},
+    headers: { Authorization: `Bearer ${token}` }
+  });

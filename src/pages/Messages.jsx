@@ -16,7 +16,8 @@ import {
   FaFileAlt,
   FaLink,
   FaEdit,
-  FaTrash
+  FaTrash,
+  FaFlag
 } from "react-icons/fa";
 import {
   getInbox,
@@ -30,9 +31,11 @@ import {
   getMyReviewForUser,
   createReview,
   editMessage,
-  deleteMessage
+  deleteMessage,
+  createMessageReport
 } from "../api";
 import ReviewForm from "../components/ReviewForm";
+import ReportForm from "../components/ReportForm";
 import { useConfirm } from "../contexts/ConfirmContext";
 
 const EDIT_WINDOW_MS = 15 * 60 * 1000;
@@ -156,6 +159,7 @@ function Messages() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
   const token = localStorage.getItem("token");
   const myId = localStorage.getItem("userId");
   const streamRef = useRef(null);
@@ -241,6 +245,7 @@ function Messages() {
         setEditingMessageId(null);
         setEditingContent("");
         setOpenMenuId(null);
+        setReportTarget(null);
       }
     };
     window.addEventListener("keydown", handleEsc);
@@ -307,6 +312,18 @@ function Messages() {
     const res = await createReview(payload, token);
     setMyReview(res.data);
     setShowReviewForm(false);
+  };
+
+  const handleSubmitMessageReport = async (payload) => {
+    await createMessageReport(payload, token);
+  };
+
+  const handleReportMessage = (msg) => {
+    setReportTarget({
+      messageId: msg._id,
+      senderName: msg.sender?.name || "user"
+    });
+    setOpenMenuId(null);
   };
 
   const handleFileSelect = (e, type) => {
@@ -784,7 +801,12 @@ function Messages() {
                             )}
                             <div className={`message-bubble message-bubble-deleted ${mine ? "mine" : "theirs"}`}>
                               <span className="message-bubble-content">
-                                <em>This message was deleted</em>
+                                <em>This message was deleted by a moderator</em>
+                                {msg.deletionReason && (
+                                  <span className="message-deletion-reason">
+                                    Reason: {msg.deletionReason}
+                                  </span>
+                                )}
                               </span>
                               <span className="message-bubble-time">{formatTime(msg.createdAt)}</span>
                             </div>
@@ -858,6 +880,34 @@ function Messages() {
                             )}
                             <span className="message-bubble-time">{formatTime(msg.createdAt)}</span>
                           </div>
+
+                          {!mine && !msg.mediaUrl && (
+                            <div className="message-menu-wrapper">
+                              <button
+                                type="button"
+                                className="message-menu-button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(openMenuId === msg._id ? null : msg._id);
+                                }}
+                                aria-label="Message options"
+                                disabled={deletingId === msg._id}
+                              >
+                                <FaEllipsisV />
+                              </button>
+                              {openMenuId === msg._id && (
+                                <div className="message-menu-dropdown">
+                                  <button
+                                    type="button"
+                                    className="message-menu-report"
+                                    onClick={() => handleReportMessage(msg)}
+                                  >
+                                    <FaFlag /> <span>Report</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           {mine && !msg.mediaUrl && (
                             <div className="message-menu-wrapper">
@@ -1180,6 +1230,15 @@ function Messages() {
           onSubmit={handleSubmitReview}
         />
       )}
+
+      <ReportForm
+        isOpen={Boolean(reportTarget)}
+        targetType="message"
+        targetId={reportTarget?.messageId}
+        targetName={reportTarget?.senderName}
+        onClose={() => setReportTarget(null)}
+        onSubmit={handleSubmitMessageReport}
+      />
     </main>
   );
 }

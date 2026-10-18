@@ -7,35 +7,52 @@ import {
   FaCheck,
   FaSignInAlt,
   FaKey,
-  FaTimesCircle
+  FaTimesCircle,
+  FaShieldAlt,
+  FaFlag
 } from "react-icons/fa";
 import { getModeratorMyActivity, exportModeratorMyActivity } from "../api";
 
 const ACTION_ICONS = {
   delete_post: FaTrash,
+  delete_message: FaTrash,
   resolve_report: FaCheck,
+  escalate_report: FaShieldAlt,
   dismiss_report: FaTimesCircle,
   login_success: FaSignInAlt,
   login_failed: FaTimesCircle,
-  password_reset: FaKey
+  password_reset: FaKey,
+  report_post: FaFlag,
+  report_user: FaFlag,
+  report_message: FaFlag
 };
 
 const ACTION_COLORS = {
   delete_post: "#dc2626",
+  delete_message: "#dc2626",
   resolve_report: "#166534",
+  escalate_report: "#d97706",
   dismiss_report: "#6b7280",
   login_success: "#2639ba",
   login_failed: "#dc2626",
-  password_reset: "#f59e0b"
+  password_reset: "#f59e0b",
+  report_post: "#ad2438",
+  report_user: "#ad2438",
+  report_message: "#ad2438"
 };
 
 const ACTION_LABELS = {
   delete_post: "Deleted post",
+  delete_message: "Deleted message",
   resolve_report: "Resolved report",
+  escalate_report: "Escalated report",
   dismiss_report: "Dismissed report",
   login_success: "Logged in",
   login_failed: "Failed login attempt",
-  password_reset: "Reset password"
+  password_reset: "Reset password",
+  report_post: "Reported post",
+  report_user: "Reported user",
+  report_message: "Reported message"
 };
 
 function formatDateLabel(dateStr) {
@@ -258,6 +275,16 @@ function ModeratorActivityTab() {
                           {log.details.postTitle && (
                             <span className="audit-log-detail-item">
                               <strong>Post:</strong> {log.details.postTitle}
+                            </span>
+                          )}
+                          {log.details.originalContent && (
+                            <span className="audit-log-detail-item">
+                              <strong>Original message:</strong> "{log.details.originalContent}"
+                            </span>
+                          )}
+                          {log.details.senderName && (
+                            <span className="audit-log-detail-item">
+                              <strong>Sender:</strong> {log.details.senderName}
                             </span>
                           )}
                         </div>

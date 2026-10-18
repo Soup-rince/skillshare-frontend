@@ -18,6 +18,13 @@ const USER_REASONS = [
   { value: "other", label: "Other (please specify)" },
 ];
 
+const MESSAGE_REASONS = [
+  { value: "spam", label: "Spam or repetitive messages" },
+  { value: "harassment", label: "Harassment or hate speech" },
+  { value: "inappropriate", label: "Inappropriate or offensive content" },
+  { value: "other", label: "Other (please specify)" },
+];
+
 function ReportForm({ isOpen, targetType = "post", targetId, targetName, onClose, onSubmit }) {
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
@@ -28,11 +35,14 @@ function ReportForm({ isOpen, targetType = "post", targetId, targetName, onClose
   if (!isOpen) return null;
 
   const isUser = targetType === "user";
-  const reasons = isUser ? USER_REASONS : POST_REASONS;
-  const headerTitle = isUser ? "Report this user" : "Report this post";
-  const headerSubtitle = isUser
-    ? "Help us keep SkillShare safe. Your report is anonymous to the user."
-    : "Help us keep SkillShare safe. Your report is anonymous to the post owner.";
+  const isMessage = targetType === "message";
+  const reasons = isMessage ? MESSAGE_REASONS : isUser ? USER_REASONS : POST_REASONS;
+  const headerTitle = isMessage ? "Report this message" : isUser ? "Report this user" : "Report this post";
+  const headerSubtitle = isMessage
+    ? "Help us keep SkillShare safe. The sender won't be notified of who reported them."
+    : isUser
+      ? "Help us keep SkillShare safe. Your report is anonymous to the user."
+      : "Help us keep SkillShare safe. Your report is anonymous to the post owner.";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,9 +60,11 @@ function ReportForm({ isOpen, targetType = "post", targetId, targetName, onClose
 
     try {
       setSubmitting(true);
-      const payload = isUser
-        ? { userId: targetId, reason, details: details.trim() }
-        : { post: targetId, reason, details: details.trim() };
+      const payload = isMessage
+        ? { messageId: targetId, reason, details: details.trim() }
+        : isUser
+          ? { userId: targetId, reason, details: details.trim() }
+          : { post: targetId, reason, details: details.trim() };
       await onSubmit(payload);
       setSuccess(true);
       setTimeout(() => {

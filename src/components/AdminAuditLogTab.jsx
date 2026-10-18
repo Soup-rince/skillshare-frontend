@@ -12,7 +12,8 @@ import {
   FaUserPlus,
   FaEnvelopeOpenText,
   FaKey,
-  FaTimesCircle
+  FaTimesCircle,
+  FaShieldAlt
 } from "react-icons/fa";
 import { getAdminAuditLogs, exportAdminAuditLogs } from "../api";
 
@@ -20,39 +21,54 @@ const ACTION_ICONS = {
   suspend_user: FaBan,
   unsuspend_user: FaCheck,
   delete_post: FaTrash,
+  delete_message: FaTrash,
   resolve_report: FaCheck,
+  escalate_report: FaShieldAlt,
   dismiss_report: FaTimesCircle,
   login_success: FaSignInAlt,
   login_failed: FaTimesCircle,
   password_reset: FaKey,
   email_verified: FaEnvelopeOpenText,
-  register: FaUserPlus
+  register: FaUserPlus,
+  report_post: FaFlag,
+  report_user: FaFlag,
+  report_message: FaFlag
 };
 
 const ACTION_COLORS = {
   suspend_user: "#dc2626",
   unsuspend_user: "#168565",
   delete_post: "#dc2626",
+  delete_message: "#dc2626",
   resolve_report: "#166534",
+  escalate_report: "#d97706",
   dismiss_report: "#6b7280",
   login_success: "#2639ba",
   login_failed: "#dc2626",
   password_reset: "#f59e0b",
   email_verified: "#168565",
-  register: "#2639ba"
+  register: "#2639ba",
+  report_post: "#ad2438",
+  report_user: "#ad2438",
+  report_message: "#ad2438"
 };
 
 const ACTION_LABELS = {
   suspend_user: "Suspended user",
   unsuspend_user: "Unsuspended user",
   delete_post: "Deleted post",
+  delete_message: "Deleted message",
   resolve_report: "Resolved report",
+  escalate_report: "Escalated report",
   dismiss_report: "Dismissed report",
   login_success: "Logged in",
   login_failed: "Failed login attempt",
   password_reset: "Reset password",
   email_verified: "Verified email",
-  register: "Registered account"
+  register: "Registered account",
+  report_post: "Reported post",
+  report_user: "Reported user",
+  report_message: "Reported message"
 };
 
 function formatDateLabel(dateStr) {
@@ -284,6 +300,16 @@ function AdminAuditLogTab() {
                           {log.details.postTitle && (
                             <span className="audit-log-detail-item">
                               <strong>Post:</strong> {log.details.postTitle}
+                            </span>
+                          )}
+                          {log.details.originalContent && (
+                            <span className="audit-log-detail-item">
+                              <strong>Original message:</strong> "{log.details.originalContent}"
+                            </span>
+                          )}
+                          {log.details.senderName && (
+                            <span className="audit-log-detail-item">
+                              <strong>Sender:</strong> {log.details.senderName}
                             </span>
                           )}
                         </div>
