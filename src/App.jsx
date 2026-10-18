@@ -23,6 +23,8 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyCode from "./pages/VerifyCode";
 import { ConfirmProvider } from "./contexts/ConfirmContext";
+import MyPosts from "./pages/MyPosts";
+import Notifications from "./pages/Notifications";
 
 function AppContent() {
   const token = localStorage.getItem("token");
@@ -62,7 +64,8 @@ function AppContent() {
         <Route path="/profile/edit" element={token ? <EditProfile /> : <Navigate to="/login" />} />
         <Route path="/profile/:id" element={token ? <Profile /> : <Navigate to="/login" />} />
         <Route path="/dashboard" element={token ? <Dashboard /> : <Navigate to="/login" />} />
-
+        <Route path="/my-posts" element={token ? <MyPosts /> : <Navigate to="/login" />} />
+        <Route path="/notifications" element={token ? <Notifications /> : <Navigate to="/login" />} />
         <Route
           path="/moderator"
           element={

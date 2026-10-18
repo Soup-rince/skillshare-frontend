@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   FaSearch,
@@ -13,7 +13,9 @@ import {
   getAllModerators,
   changeUserRole,
   suspendModerator,
-  unsuspendModerator
+  unsuspendModerator,
+  bulkSuspendSuperAdminUsers,
+  bulkDemoteSuperAdminUsers
 } from "../api";
 import ConfirmDialog from "./ConfirmDialog";
 
@@ -51,6 +53,8 @@ function ModeratorManagementTab() {
   const [error, setError] = useState("");
   const [actionId, setActionId] = useState("");
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const token = localStorage.getItem("token");
   const myId = localStorage.getItem("userId");
 
@@ -60,6 +64,9 @@ function ModeratorManagementTab() {
       setError("");
       const res = await getAllModerators(token);
       setModerators(res.data);
+      setSelectedIds((prev) =>
+        prev.filter((id) => res.data.some((u) => u._id === id))
+      );
     } catch (err) {
       setError(err.response?.data?.message || "Could not load moderators.");
     } finally {
@@ -180,6 +187,85 @@ function ModeratorManagementTab() {
     );
   });
 
+  const selectableIds = useMemo(
+    () => filteredModerators.filter((u) => u._id !== myId).map((u) => u._id),
+    [filteredModerators, myId]
+  );
+  const allSelected =
+    selectableIds.length > 0 && selectableIds.every((id) => selectedIds.includes(id));
+  const someSelected = selectedIds.length > 0 && !allSelected;
+
+  const toggleOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(selectableIds);
+    }
+  };
+
+  const handleBulkDemote = () => {
+    if (selectedIds.length === 0) return;
+    setConfirmDialog({
+      title: `Demote ${selectedIds.length} moderator(s) to Member`,
+      message: `Demote ${selectedIds.length} selected moderator(s) to Member? They will lose all moderator privileges.`,
+      confirmLabel: "Demote all",
+      tone: "danger",
+      inputLabel: "Reason for demotion",
+      inputPlaceholder: "e.g. Inactive, restructuring moderator team",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
+        setBulkBusy(true);
+        try {
+          await bulkDemoteSuperAdminUsers(
+            { userIds: selectedIds, targetRole: "member", reason },
+            token
+          );
+          setSelectedIds([]);
+          await loadModerators();
+        } catch (err) {
+          setError(err.response?.data?.message || "Could not bulk demote moderators.");
+        } finally {
+          setBulkBusy(false);
+          setConfirmDialog(null);
+        }
+      }
+    });
+  };
+
+  const handleBulkSuspend = () => {
+    if (selectedIds.length === 0) return;
+    setConfirmDialog({
+      title: `Suspend ${selectedIds.length} moderator(s)`,
+      message: `Suspend ${selectedIds.length} selected moderator(s)? They will not be able to log in.`,
+      confirmLabel: "Suspend all",
+      tone: "danger",
+      inputLabel: "Reason for suspension",
+      inputPlaceholder: "e.g. Policy violation",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
+        setBulkBusy(true);
+        try {
+          await bulkSuspendSuperAdminUsers({ userIds: selectedIds, reason }, token);
+          setSelectedIds([]);
+          await loadModerators();
+        } catch (err) {
+          setError(err.response?.data?.message || "Could not bulk suspend moderators.");
+        } finally {
+          setBulkBusy(false);
+          setConfirmDialog(null);
+        }
+      }
+    });
+  };
+
   return (
     <section className="superadmin-section">
       {error && <p className="alert" style={{ marginBottom: 16 }}>{error}</p>}
@@ -199,104 +285,182 @@ function ModeratorManagementTab() {
         <span>{filteredModerators.length} moderators</span>
       </div>
 
+      {selectedIds.length > 0 && (
+        <div
+          className="bulk-action-bar"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "10px 14px",
+            marginBottom: 12,
+            background: "#f3e8ff",
+            borderRadius: 8,
+            flexWrap: "wrap"
+          }}
+        >
+          <strong>{selectedIds.length} selected</strong>
+          <button
+            type="button"
+            className="button-secondary"
+            onClick={handleBulkDemote}
+            disabled={bulkBusy}
+          >
+            <FaUser aria-hidden="true" /> Demote to Member
+          </button>
+          <button
+            type="button"
+            className="button-danger"
+            onClick={handleBulkSuspend}
+            disabled={bulkBusy}
+          >
+            <FaUserSlash aria-hidden="true" /> Suspend
+          </button>
+          <button
+            type="button"
+            className="button-ghost"
+            onClick={() => setSelectedIds([])}
+            disabled={bulkBusy}
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="empty-state"><p>Loading moderators...</p></div>
       ) : filteredModerators.length === 0 ? (
         <div className="empty-state"><p>No moderators found.</p></div>
       ) : (
-        <div className="admin-post-list">
-          {filteredModerators.map((user) => {
-            const isSelf = user._id === myId;
-            const canAct = !isSelf;
+        <>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 8,
+              fontSize: 13
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={(el) => {
+                if (el) el.indeterminate = someSelected;
+              }}
+              onChange={toggleAll}
+              aria-label="Select all moderators"
+            />
+            <span>Select all ({selectableIds.length} selectable)</span>
+          </div>
 
-            return (
-              <article className="admin-user-row" key={user._id}>
-                <div className="admin-user-info">
-                  <span
-                    className="admin-user-avatar"
-                    style={{ background: getAvatarColor(user.name) }}
-                    aria-hidden="true"
-                  >
-                    {getInitials(user.name)}
-                  </span>
+          <div className="admin-post-list">
+            {filteredModerators.map((user) => {
+              const isSelf = user._id === myId;
+              const canAct = !isSelf;
+              const canSelect = !isSelf;
 
-                  <div className="admin-user-details">
-                    <div className="admin-user-name-row">
-                      <h3>{user.name}</h3>
-                      <span className="role-badge role-moderator">
-                        <FaUserTie />
-                        <span>moderator</span>
+              return (
+                <article className="admin-user-row" key={user._id}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8, flex: 1 }}>
+                    {canSelect && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(user._id)}
+                        onChange={() => toggleOne(user._id)}
+                        aria-label={`Select ${user.name}`}
+                        style={{ marginTop: 14 }}
+                      />
+                    )}
+
+                    <div className="admin-user-info">
+                      <span
+                        className="admin-user-avatar"
+                        style={{ background: getAvatarColor(user.name) }}
+                        aria-hidden="true"
+                      >
+                        {getInitials(user.name)}
                       </span>
-                      {user.isSuspended && (
-                        <span className="suspended-badge">
-                          <FaBan /> Suspended
-                        </span>
-                      )}
+
+                      <div className="admin-user-details">
+                        <div className="admin-user-name-row">
+                          <h3>{user.name}</h3>
+                          <span className="role-badge role-moderator">
+                            <FaUserTie />
+                            <span>moderator</span>
+                          </span>
+                          {user.isSuspended && (
+                            <span className="suspended-badge">
+                              <FaBan /> Suspended
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="admin-user-email">{user.email}</p>
+                        <p className="admin-user-meta">
+                          Joined {formatDate(user.createdAt)}
+                          {user.isSuspended && user.suspendedReason && (
+                            <> · Reason: {user.suspendedReason}</>
+                          )}
+                        </p>
+                      </div>
                     </div>
-
-                    <p className="admin-user-email">{user.email}</p>
-                    <p className="admin-user-meta">
-                      Joined {formatDate(user.createdAt)}
-                      {user.isSuspended && user.suspendedReason && (
-                        <> · Reason: {user.suspendedReason}</>
-                      )}
-                    </p>
                   </div>
-                </div>
 
-                {canAct && (
-                  <div className="admin-user-actions">
-                    <Link className="button-secondary" to={`/profile/${user._id}`}>
-                      View profile
-                    </Link>
+                  {canAct && (
+                    <div className="admin-user-actions">
+                      <Link className="button-secondary" to={`/profile/${user._id}`}>
+                        View profile
+                      </Link>
 
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => handlePromoteToAdmin(user)}
-                      disabled={actionId === user._id}
-                    >
-                      <FaUserShield aria-hidden="true" />
-                      <span>Promote to Admin</span>
-                    </button>
-
-                    <button
-                      className="button-danger"
-                      type="button"
-                      onClick={() => handleDemoteToMember(user)}
-                      disabled={actionId === user._id}
-                    >
-                      <FaUser aria-hidden="true" />
-                      <span>Demote to Member</span>
-                    </button>
-
-                    {user.isSuspended ? (
                       <button
                         className="button-secondary"
                         type="button"
-                        onClick={() => handleUnsuspend(user)}
+                        onClick={() => handlePromoteToAdmin(user)}
                         disabled={actionId === user._id}
                       >
-                        <FaUserCheck aria-hidden="true" />
-                        <span>Unsuspend</span>
+                        <FaUserShield aria-hidden="true" />
+                        <span>Promote to Admin</span>
                       </button>
-                    ) : (
+
                       <button
                         className="button-danger"
                         type="button"
-                        onClick={() => handleSuspend(user)}
+                        onClick={() => handleDemoteToMember(user)}
                         disabled={actionId === user._id}
                       >
-                        <FaUserSlash aria-hidden="true" />
-                        <span>Suspend</span>
+                        <FaUser aria-hidden="true" />
+                        <span>Demote to Member</span>
                       </button>
-                    )}
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </div>
+
+                      {user.isSuspended ? (
+                        <button
+                          className="button-secondary"
+                          type="button"
+                          onClick={() => handleUnsuspend(user)}
+                          disabled={actionId === user._id}
+                        >
+                          <FaUserCheck aria-hidden="true" />
+                          <span>Unsuspend</span>
+                        </button>
+                      ) : (
+                        <button
+                          className="button-danger"
+                          type="button"
+                          onClick={() => handleSuspend(user)}
+                          disabled={actionId === user._id}
+                        >
+                          <FaUserSlash aria-hidden="true" />
+                          <span>Suspend</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </>
       )}
 
       <ConfirmDialog

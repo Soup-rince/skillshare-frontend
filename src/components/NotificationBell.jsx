@@ -106,8 +106,18 @@ function NotificationBell() {
     try {
       setLoading(true);
       const res = await getMyNotifications(token);
-      setNotifications(res.data);
+      const payload = res?.data;
+      let list = [];
+      if (Array.isArray(payload)) {
+        list = payload;
+      } else if (Array.isArray(payload?.data)) {
+        list = payload.data;
+      } else if (Array.isArray(payload?.notifications)) {
+        list = payload.notifications;
+      }
+      setNotifications(list);
     } catch {
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -191,6 +201,8 @@ function NotificationBell() {
     }
   };
 
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+
   return (
     <>
       <div className="notification-wrapper" ref={dropdownRef}>
@@ -226,13 +238,13 @@ function NotificationBell() {
             <div className="notification-list">
               {loading ? (
                 <div className="notification-empty">Loading...</div>
-              ) : notifications.length === 0 ? (
+              ) : safeNotifications.length === 0 ? (
                 <div className="notification-empty">
                   <FaBell />
                   <p>No notifications yet</p>
                 </div>
               ) : (
-                notifications.map((notif) => {
+                safeNotifications.map((notif) => {
                   const IconComponent = getIconForNotification(notif);
                   const color = TYPE_COLORS[notif.type] || "#66708a";
                   const reasonPreview = getReasonPreview(notif);

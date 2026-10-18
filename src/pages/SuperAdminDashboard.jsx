@@ -10,8 +10,22 @@ import {
   FaSearch,
   FaHistory,
   FaBullhorn,
-  FaUserTie
+  FaUserTie,
+  FaHeartbeat,
+  FaCog
 } from "react-icons/fa";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  LineChart,
+  Line,
+  Legend
+} from "recharts";
 import {
   checkAdmin,
   getSuperAdminStats,
@@ -23,6 +37,8 @@ import ModeratorManagementTab from "../components/ModeratorManagementTab";
 import UserManagementTab from "../components/UserManagementTab";
 import AuditLogTab from "../components/AuditLogTab";
 import AnnouncementsTab from "../components/AnnouncementsTab";
+import SystemHealthTab from "../components/SystemHealthTab";
+import OperationsTab from "../components/OperationsTab";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 function getInitials(name) {
@@ -56,7 +72,7 @@ function SuperAdminDashboard() {
   const [accessGranted, setAccessGranted] = useState(null);
   const [stats, setStats] = useState(null);
   const [superAdmins, setSuperAdmins] = useState([]);
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState("health");
   const [error, setError] = useState("");
   const [actionId, setActionId] = useState("");
   const [confirmDialog, setConfirmDialog] = useState(null);
@@ -148,13 +164,16 @@ function SuperAdminDashboard() {
     );
   }
 
+  const roleChart = stats?.roleChart || [];
+  const growthTrend = stats?.growthTrend || [];
+
   return (
     <main className="page-container">
       <header className="superadmin-heading">
         <div>
           <p className="eyebrow superadmin-eyebrow">System control</p>
           <h1>Super Admin Dashboard</h1>
-          <p>Full system privileges — manage users, moderators, admins, super admins, audit logs, and announcements.</p>
+          <p>Full system privileges — monitor system health, manage users, roles, audit logs, and announcements.</p>
         </div>
 
         <span className="superadmin-badge">
@@ -201,7 +220,69 @@ function SuperAdminDashboard() {
         </section>
       )}
 
+      {stats && (
+        <section
+          className="superadmin-charts"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: 16,
+            margin: "24px 0"
+          }}
+        >
+          <div className="superadmin-chart-card">
+            <h3 style={{ marginBottom: 12 }}>Users by role</h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={roleChart}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="role" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#7c3aed" radius={[6, 6, 0, 0]} name="Users" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="superadmin-chart-card">
+            <h3 style={{ marginBottom: 12 }}>User growth (last 6 months)</h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={growthTrend}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="users"
+                  stroke="#7c3aed"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  name="New users"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
+
       <div className="superadmin-tabs">
+        <button
+          type="button"
+          className={`superadmin-tab ${activeTab === "health" ? "active" : ""}`}
+          onClick={() => setActiveTab("health")}
+        >
+          <FaHeartbeat aria-hidden="true" />
+          <span>System Health</span>
+        </button>
+        <button
+          type="button"
+          className={`superadmin-tab ${activeTab === "operations" ? "active" : ""}`}
+          onClick={() => setActiveTab("operations")}
+        >
+          <FaCog aria-hidden="true" />
+          <span>Operations</span>
+        </button>
         <button
           type="button"
           className={`superadmin-tab ${activeTab === "users" ? "active" : ""}`}
@@ -248,6 +329,10 @@ function SuperAdminDashboard() {
           <span>Announcements</span>
         </button>
       </div>
+
+      {activeTab === "health" && <SystemHealthTab />}
+
+      {activeTab === "operations" && <OperationsTab />}
 
       {activeTab === "users" && <UserManagementTab />}
 

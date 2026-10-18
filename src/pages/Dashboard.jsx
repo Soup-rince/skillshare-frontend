@@ -12,16 +12,36 @@ import {
   FaFlag,
   FaCheck,
   FaShieldAlt,
-  FaUser
+  FaUser,
+  FaHandshake,
+  FaChartBar,
+  FaEdit,
+  FaEnvelopeOpen,
+  FaEnvelopeSquare,
+  FaRobot,
+  FaArrowRight,
+  FaComments
 } from "react-icons/fa";
 import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell
+} from "recharts";
+import {
   getDashboard,
-  getUserReviews,
   getMyNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead
 } from "../api";
 import NotificationDetailModal from "../components/NotificationDetailModal";
+import SkeletonDashboard from "../components/SkeletonDashboard";
 import {
   registerServiceWorker,
   requestPushPermission,
@@ -37,7 +57,8 @@ const ICON_MAP = {
   flag: FaFlag,
   check: FaCheck,
   shield: FaShieldAlt,
-  user: FaUser
+  user: FaUser,
+  file: FaFileAlt
 };
 
 const TYPE_COLORS = {
@@ -49,8 +70,14 @@ const TYPE_COLORS = {
   exchange_completed: "#168565",
   promoted: "#168565",
   demoted: "#a16207",
-  post_reported: "#ad2438"
+  post_reported: "#ad2438",
+  report: "#ad2438",
+  exchange: "#168565",
+  post: "#2639ba",
+  review: "#f59e0b"
 };
+
+const BAR_COLORS = ["#2639ba", "#7c3aed", "#168565", "#f59e0b", "#ad2438", "#0369a1", "#be123c", "#6d28d9"];
 
 function formatRelativeTime(dateStr) {
   const d = new Date(dateStr);
@@ -70,18 +97,14 @@ function formatRelativeTime(dateStr) {
 function Dashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
-  const [reviewsData, setReviewsData] = useState({ total: 0, average: 0 });
   const [error, setError] = useState("");
   const [pushStatus, setPushStatus] = useState("default");
   const [pushLoading, setPushLoading] = useState(false);
-
-  // Notifications state
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [selectedNotification, setSelectedNotification] = useState(null);
 
   const token = localStorage.getItem("token");
-  const userId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || "there";
 
   useEffect(() => {
@@ -97,21 +120,6 @@ function Dashboard() {
   }, [token]);
 
   useEffect(() => {
-    if (!userId || !token) return;
-    const fetchReviews = async () => {
-      try {
-        const res = await getUserReviews(userId, token);
-        setReviewsData({
-          total: res.data.total || 0,
-          average: res.data.average || 0
-        });
-      } catch {
-      }
-    };
-    fetchReviews();
-  }, [userId, token]);
-
-  useEffect(() => {
     const init = async () => {
       await registerServiceWorker();
       const status = await getPushPermissionStatus();
@@ -120,14 +128,14 @@ function Dashboard() {
     init();
   }, []);
 
-  // Fetch recent notifications (5 lang)
   useEffect(() => {
     if (!token) return;
     const fetchNotifications = async () => {
       try {
         setNotificationsLoading(true);
         const res = await getMyNotifications(token);
-        setNotifications((res.data || []).slice(0, 5));
+        const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+        setNotifications(list.slice(0, 3));
       } catch {
         setNotifications([]);
       } finally {
@@ -157,7 +165,6 @@ function Dashboard() {
           current.map((n) => (n._id === notification._id ? { ...n, read: true } : n))
         );
       }
-
       if (notification.type === "new_message") {
         if (notification.link) navigate(notification.link);
       } else {
@@ -178,10 +185,71 @@ function Dashboard() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   if (error) return <main className="page-container"><p className="alert">{error}</p></main>;
-  if (!data) return <main className="page-container"><div className="empty-state"><p>Loading your dashboard...</p></div></main>;
+  if (!data) return <SkeletonDashboard />;
+
+  const { userInfo, profileCompleteness, missingFields, aiRecommendations = [] } = data;
 
   return (
     <main className="page-container">
+      {userInfo && (
+        <section className="dashboard-profile-card">
+          <div
+            className="dashboard-profile-avatar"
+            style={{ background: "#2639ba" }}
+            aria-hidden="true"
+          >
+            {userInfo.name ? userInfo.name.charAt(0).toUpperCase() : "?"}
+          </div>
+          <div className="dashboard-profile-info">
+            <h2>{userInfo.name}</h2>
+            <p className="dashboard-profile-meta">
+              <span className="dashboard-profile-role">
+                {userInfo.role.replace("_", " ")}
+              </span>
+              {" · Member since "}
+              {new Date(userInfo.memberSince).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+            </p>
+            <p className="dashboard-profile-email">{userInfo.email}</p>
+
+            <div className="dashboard-account-status">
+              {userInfo.isVerified ? (
+                <span className="dashboard-status-badge dashboard-status-verified">
+                  <FaCheck /> Email verified
+                </span>
+              ) : (
+                <span className="dashboard-status-badge dashboard-status-warning">
+                  <FaEnvelopeOpen /> Email not verified
+                </span>
+              )}
+              {pushStatus === "granted" ? (
+                <span className="dashboard-status-badge dashboard-status-verified">
+                  <FaBell /> Push enabled
+                </span>
+              ) : pushStatus === "unsupported" ? null : (
+                <span className="dashboard-status-badge dashboard-status-warning">
+                  <FaEnvelopeSquare /> Push disabled
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="dashboard-profile-right">
+            <Link className="button-secondary" to="/profile/edit">
+              <FaEdit /> <span>Edit profile</span>
+            </Link>
+            <div className="dashboard-completeness">
+              <span>Profile completeness</span>
+              <strong>{profileCompleteness}%</strong>
+              <div className="profile-completeness-bar">
+                <div style={{ width: `${profileCompleteness}%` }}></div>
+              </div>
+              {missingFields && missingFields.length > 0 && (
+                <small>Missing: {missingFields.join(", ")}</small>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       <header className="page-heading">
         <div>
           <p className="eyebrow">Your space</p>
@@ -211,11 +279,14 @@ function Dashboard() {
         </section>
       )}
 
-      <section className="dashboard-stats">
+      <section className="dashboard-stats dashboard-stats-extended">
         <div className="stat-card">
           <span className="stat-icon" aria-hidden="true"><FaFileAlt /></span>
-          <span className="stat-label">Your posts</span>
+          <span className="stat-label">Total posts</span>
           <strong className="stat-value">{data.totalPosts}</strong>
+          <small className="stat-hint">
+            {data.totalOffers} offer{data.totalOffers !== 1 ? "s" : ""} · {data.totalRequests} request{data.totalRequests !== 1 ? "s" : ""}
+          </small>
         </div>
         <div className="stat-card">
           <span className="stat-icon" aria-hidden="true"><FaEnvelope /></span>
@@ -225,25 +296,154 @@ function Dashboard() {
           </strong>
         </div>
         <div className="stat-card">
-          <span className="stat-icon" aria-hidden="true"><FaBolt /></span>
-          <span className="stat-label">Recent activity</span>
-          <strong className="stat-value">{data.recentMessages.length}</strong>
-        </div>
-        <div className="stat-card">
           <span className="stat-icon" aria-hidden="true"><FaStar /></span>
           <span className="stat-label">Average rating</span>
           <strong className="stat-value">
-            {reviewsData.total > 0 ? reviewsData.average : "—"}
+            {data.totalReviews > 0 ? data.avgRating : "—"}
           </strong>
-          {reviewsData.total > 0 && (
+          {data.totalReviews > 0 && (
             <small className="stat-hint">
-              {reviewsData.total} review{reviewsData.total > 1 ? "s" : ""}
+              {data.totalReviews} review{data.totalReviews !== 1 ? "s" : ""}
             </small>
           )}
         </div>
+        <div className="stat-card">
+          <span className="stat-icon" aria-hidden="true"><FaHandshake /></span>
+          <span className="stat-label">Exchanges completed</span>
+          <strong className="stat-value">{data.totalExchanges || 0}</strong>
+        </div>
       </section>
 
-      {/* ===== RECENT NOTIFICATIONS ===== */}
+      <section className="dashboard-charts">
+        <div className="dashboard-chart-card">
+          <h3 className="dashboard-chart-title">
+            <FaChartBar aria-hidden="true" /> Posts by category
+          </h3>
+          {data.postsByCategory && data.postsByCategory.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={data.postsByCategory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4f5fc4" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#2639ba" stopOpacity={0.75} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f8" vertical={false} />
+                <XAxis dataKey="category" tick={{ fontSize: 11, fill: "#66708a" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#66708a" }} allowDecimals={false} axisLine={false} tickLine={false} />
+                <Tooltip
+                  contentStyle={{ borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+                  cursor={{ fill: "rgba(38, 57, 186, 0.05)" }}
+                />
+                <Bar dataKey="count" fill="url(#barGradient)" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="dashboard-chart-empty">
+              <FaChartBar size={28} style={{ color: "#c7cce0", marginBottom: 10 }} />
+              <p>No posts yet.</p>
+              <Link to="/create-post" className="button-secondary" style={{ marginTop: 10 }}>
+                Create your first post
+              </Link>
+            </div>
+          )}
+        </div>
+
+        <div className="dashboard-chart-card">
+          <h3 className="dashboard-chart-title">
+            <FaBolt aria-hidden="true" /> Activity (last 6 months)
+          </h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={data.monthlyActivity || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="linePostsGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#2639ba" />
+                  <stop offset="100%" stopColor="#4f5fc4" />
+                </linearGradient>
+                <linearGradient id="lineMessagesGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#168565" />
+                  <stop offset="100%" stopColor="#22a87c" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f8" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#66708a" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#66708a" }} allowDecimals={false} axisLine={false} tickLine={false} />
+              <Tooltip
+                contentStyle={{ borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+              />
+              <Line type="monotone" dataKey="posts" name="Posts" stroke="url(#linePostsGradient)" strokeWidth={2.5} dot={{ r: 4, strokeWidth: 2, fill: "#fff" }} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="messages" name="Messages" stroke="url(#lineMessagesGradient)" strokeWidth={2.5} dot={{ r: 4, strokeWidth: 2, fill: "#fff" }} activeDot={{ r: 6 }} />
+            </LineChart>
+          </ResponsiveContainer>
+          <div className="chart-legend">
+            <span><span className="chart-legend-dot" style={{ background: "#2639ba" }} /> Posts</span>
+            <span><span className="chart-legend-dot" style={{ background: "#168565" }} /> Messages</span>
+          </div>
+        </div>
+      </section>
+
+      {aiRecommendations.length > 0 && (
+        <section className="dashboard-ai-section">
+          <h2 className="section-title">
+            <FaRobot aria-hidden="true" />
+            <span>AI recommendations</span>
+          </h2>
+          <div className="dashboard-ai-list">
+            {aiRecommendations.map((rec, idx) => (
+              <div className="dashboard-ai-card" key={idx}>
+                <div className="dashboard-ai-score">
+                  {Math.round((rec.matchScore || 0) * 100)}%
+                </div>
+                <div className="dashboard-ai-info">
+                  <strong>{rec.ownerName}</strong>
+                  <p>"{rec.postTitle}" — {rec.postCategory}</p>
+                  <span className="dashboard-ai-type">
+                    {rec.postType === "offer" ? "Offering" : "Requesting"}
+                  </span>
+                </div>
+                <div className="dashboard-ai-actions">
+                  <Link className="button-secondary" to={`/profile/${rec.ownerId}`}>
+                    View profile
+                  </Link>
+                  <Link className="button" to={`/messages?to=${rec.ownerId}`}>
+                    <FaComments /> Message
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {data.recentActivity && data.recentActivity.length > 0 && (
+        <section className="dashboard-activity-feed">
+          <h2 className="section-title">
+            <FaBolt aria-hidden="true" />
+            <span>Recent activity</span>
+          </h2>
+          <div className="dashboard-activity-list">
+            {data.recentActivity.map((activity, idx) => {
+              const IconComponent = ICON_MAP[activity.icon] || FaBolt;
+              const color = TYPE_COLORS[activity.type] || "#66708a";
+              return (
+                <div className="dashboard-activity-item" key={idx}>
+                  <span
+                    className="dashboard-activity-icon"
+                    style={{ background: `${color}15`, color }}
+                  >
+                    <IconComponent />
+                  </span>
+                  <div className="dashboard-activity-body">
+                    <strong>{activity.title}</strong>
+                    <small>{formatRelativeTime(activity.date)}</small>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <section className="dashboard-notifications">
         <div className="dashboard-notifications-header">
           <h2 className="section-title" style={{ margin: 0 }}>
@@ -255,15 +455,20 @@ function Dashboard() {
               </span>
             )}
           </h2>
-          {unreadCount > 0 && (
-            <button
-              type="button"
-              className="notification-mark-all"
-              onClick={handleMarkAllRead}
-            >
-              Mark all as read
-            </button>
-          )}
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                className="notification-mark-all"
+                onClick={handleMarkAllRead}
+              >
+                Mark all as read
+              </button>
+            )}
+            <Link to="/notifications" className="view-all-link">
+              View all →
+            </Link>
+          </div>
         </div>
 
         {notificationsLoading ? (
@@ -316,12 +521,25 @@ function Dashboard() {
         )}
       </section>
 
-      <h2 className="section-title">Your skill posts</h2>
+      <div className="dashboard-section-header">
+        <h2 className="section-title">
+          <FaFileAlt aria-hidden="true" />
+          <span>Your skill posts ({data.totalPosts})</span>
+        </h2>
+        {data.totalPosts > 3 && (
+          <Link to="/my-posts" className="view-all-link">
+            View all →
+          </Link>
+        )}
+      </div>
       {data.myPosts.length === 0 ? (
         <div className="empty-state">
           <span className="empty-state-icon" aria-hidden="true"><FaFileAlt /></span>
           <h2>You have not shared a skill yet</h2>
           <p>Create your first post to start connecting with the community.</p>
+          <Link className="button" to="/create-post" style={{ marginTop: 12 }}>
+            <FaPlusCircle /> Create your first post
+          </Link>
         </div>
       ) : (
         <div className="list-card">
@@ -340,12 +558,23 @@ function Dashboard() {
         </div>
       )}
 
-      <h2 className="section-title">Recent messages</h2>
+      <div className="dashboard-section-header">
+        <h2 className="section-title">
+          <FaEnvelope aria-hidden="true" />
+          <span>Recent messages</span>
+        </h2>
+        <Link to="/messages" className="view-all-link">
+          View all →
+        </Link>
+      </div>
       {data.recentMessages.length === 0 ? (
         <div className="empty-state">
           <span className="empty-state-icon" aria-hidden="true"><FaEnvelope /></span>
           <h2>No messages yet</h2>
           <p>Browse skill posts to start a conversation.</p>
+          <Link className="button" to="/browse" style={{ marginTop: 12 }}>
+            <FaArrowRight /> Browse skills
+          </Link>
         </div>
       ) : (
         <div className="list-card">

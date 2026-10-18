@@ -217,6 +217,12 @@ export const getMyNotifications = (token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
+export const getMyNotificationsPaginated = (params, token) =>
+  axios.get(`${API_URL}/notifications`, {
+    params,
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
 export const getUnreadNotificationCount = (token) =>
   axios.get(`${API_URL}/notifications/unread/count`, {
     headers: { Authorization: `Bearer ${token}` }
@@ -407,26 +413,77 @@ export const unsuspendAdmin = (id, data, token) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const createUserReport = (data, token) =>
+export const createUserReport = (data, token) =>
   axios.post(`${API_URL}/reports/user`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const getEscalatedReports = (token) =>
+export const getEscalatedReports = (token) =>
   axios.get(`${API_URL}/admin/users/escalated-reports`, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const acceptTerms = (data) =>
+export const acceptTerms = (data) =>
   axios.post(`${API_URL}/auth/accept-terms`, data);
 
-  export const createMessageReport = (data, token) =>
+export const createMessageReport = (data, token) =>
   axios.post(`${API_URL}/reports/message`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const deleteMessageByModerator = (id, data, token) =>
+export const deleteMessageByModerator = (id, data, token) =>
   axios.delete(`${API_URL}/moderator/messages/${id}`, {
     data: data || {},
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getMyPosts = (params, token) =>
+  axios.get(`${API_URL}/posts/me`, {
+    params,
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getModeratorStats = (token) =>
+  axios.get(`${API_URL}/moderator/stats`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const bulkUpdateReportStatus = (data, token) =>
+  axios.patch(`${API_URL}/moderator/reports/bulk/status`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getAdminStats = (token) =>
+  axios.get(`${API_URL}/admin/users/stats`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const bulkSuspendUsers = (data, token) =>
+  axios.post(`${API_URL}/admin/users/bulk/suspend`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const bulkSuspendSuperAdminUsers = (data, token) =>
+  axios.patch(`${API_URL}/superadmin/users/bulk-suspend`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const bulkDemoteSuperAdminUsers = (data, token) =>
+  axios.patch(`${API_URL}/superadmin/users/bulk-demote`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  export const getSystemHealth = (token) =>
+  axios.get(`${API_URL}/superadmin/system/health`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const runBackupNow = (data, token) =>
+  axios.post(`${API_URL}/superadmin/system/backup`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  export const clearOldNotifications = (data, token) =>
+  axios.post(`${API_URL}/superadmin/system/notifications/cleanup`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });

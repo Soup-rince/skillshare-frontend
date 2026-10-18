@@ -14,7 +14,10 @@ import {
   FaKey,
   FaCrown,
   FaTimesCircle,
-  FaShieldAlt
+  FaShieldAlt,
+  FaUserTie,
+  FaChevronLeft,
+  FaChevronRight
 } from "react-icons/fa";
 import { getAuditLogs, exportAuditLogs } from "../api";
 
@@ -23,6 +26,8 @@ const ACTION_ICONS = {
   unsuspend_user: FaCheck,
   promote_admin: FaUserShield,
   demote_admin: FaUser,
+  promote_moderator: FaUserTie,
+  demote_to_member: FaUser,
   promote_super_admin: FaCrown,
   demote_super_admin: FaUserShield,
   delete_post: FaTrash,
@@ -45,6 +50,8 @@ const ACTION_COLORS = {
   unsuspend_user: "#168565",
   promote_admin: "#168565",
   demote_admin: "#a16207",
+  promote_moderator: "#168565",
+  demote_to_member: "#a16207",
   promote_super_admin: "#7c3aed",
   demote_super_admin: "#a16207",
   delete_post: "#dc2626",
@@ -67,6 +74,8 @@ const ACTION_LABELS = {
   unsuspend_user: "Unsuspended user",
   promote_admin: "Promoted to admin",
   demote_admin: "Demoted to member",
+  promote_moderator: "Promoted to moderator",
+  demote_to_member: "Demoted to member",
   promote_super_admin: "Promoted to super admin",
   demote_super_admin: "Demoted to admin",
   delete_post: "Deleted post",
@@ -83,6 +92,19 @@ const ACTION_LABELS = {
   report_user: "Reported user",
   report_message: "Reported message"
 };
+
+const ACTOR_ROLES = [
+  { value: "", label: "All roles" },
+  { value: "member", label: "Member" },
+  { value: "moderator", label: "Moderator" },
+  { value: "admin", label: "Admin" },
+  { value: "super_admin", label: "Super admin" }
+];
+
+const ACTION_OPTIONS = [
+  { value: "", label: "All actions" },
+  ...Object.keys(ACTION_LABELS).map((key) => ({ value: key, label: ACTION_LABELS[key] }))
+];
 
 function formatDateLabel(dateStr) {
   const d = new Date(dateStr);
@@ -125,20 +147,43 @@ function AuditLogTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [actorRole, setActorRole] = useState("");
+  const [action, setAction] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [exporting, setExporting] = useState(false);
   const token = localStorage.getItem("token");
 
-  const loadLogs = async () => {
+  const PAGE_SIZE = 50;
+
+  const loadLogs = async (overrides = {}) => {
     try {
       setLoading(true);
       setError("");
-      const params = {};
-      if (fromDate) params.from = fromDate;
-      if (toDate) params.to = toDate;
-      const res = await getAuditLogs(params, token);
-      setLogs(res.data);
+      const p = {
+        page: overrides.page ?? page,
+        limit: PAGE_SIZE
+      };
+      if (fromDate) p.from = fromDate;
+      if (toDate) p.to = toDate;
+      if (search.trim()) p.search = search.trim();
+      if (actorRole) p.actorRole = actorRole;
+      if (action) p.action = action;
+
+      const res = await getAuditLogs(p, token);
+      const payload = res.data;
+      if (Array.isArray(payload)) {
+        setLogs(payload);
+        setTotal(payload.length);
+        setTotalPages(1);
+      } else {
+        setLogs(payload.logs || []);
+        setTotal(payload.total || 0);
+        setTotalPages(payload.totalPages || 1);
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Could not load audit logs.");
     } finally {
@@ -150,16 +195,33 @@ function AuditLogTab() {
     loadLogs();
   }, []);
 
-  const handleApplyFilter = () => {
-    loadLogs();
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPage(1);
+      loadLogs({ page: 1 });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [search, actorRole, action]);
+
+  const handleApplyDateFilter = () => {
+    setPage(1);
+    loadLogs({ page: 1 });
   };
 
-  const handleClearFilter = () => {
+  const handleClearAll = () => {
+    setSearch("");
+    setActorRole("");
+    setAction("");
     setFromDate("");
     setToDate("");
-    setTimeout(() => {
-      loadLogs();
-    }, 0);
+    setPage(1);
+    setTimeout(() => loadLogs({ page: 1 }), 0);
+  };
+
+  const goToPage = (p) => {
+    const next = Math.min(Math.max(1, p), totalPages);
+    setPage(next);
+    loadLogs({ page: next });
   };
 
   const handleExport = async () => {
@@ -185,18 +247,8 @@ function AuditLogTab() {
     }
   };
 
-  const filteredLogs = logs.filter((log) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      (log.actorName || "").toLowerCase().includes(q) ||
-      (log.actorRole || "").toLowerCase().includes(q) ||
-      (log.action || "").toLowerCase().includes(q) ||
-      (log.targetName || "").toLowerCase().includes(q)
-    );
-  });
-
-  const groupedLogs = groupLogsByDate(filteredLogs);
+  const groupedLogs = groupLogsByDate(logs);
+  const hasActiveFilters = search || actorRole || action || fromDate || toDate;
 
   return (
     <section className="superadmin-section">
@@ -224,17 +276,17 @@ function AuditLogTab() {
         <button
           type="button"
           className="button-secondary"
-          onClick={handleApplyFilter}
+          onClick={handleApplyDateFilter}
         >
           Apply
         </button>
-        {(fromDate || toDate) && (
+        {hasActiveFilters && (
           <button
             type="button"
             className="button-ghost"
-            onClick={handleClearFilter}
+            onClick={handleClearAll}
           >
-            Clear
+            Clear all
           </button>
         )}
         <button
@@ -259,91 +311,164 @@ function AuditLogTab() {
         />
       </div>
 
+      <div
+        className="audit-filter-row"
+        style={{
+          display: "flex",
+          gap: 12,
+          flexWrap: "wrap",
+          marginBottom: 16
+        }}
+      >
+        <div className="audit-date-group">
+          <label htmlFor="audit-role">Actor role</label>
+          <select
+            id="audit-role"
+            value={actorRole}
+            onChange={(e) => setActorRole(e.target.value)}
+          >
+            {ACTOR_ROLES.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="audit-date-group">
+          <label htmlFor="audit-action">Action type</label>
+          <select
+            id="audit-action"
+            value={action}
+            onChange={(e) => setAction(e.target.value)}
+          >
+            {ACTION_OPTIONS.map((a) => (
+              <option key={a.value} value={a.value}>{a.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="admin-section-title">
         <h2>Audit log</h2>
-        <span>{filteredLogs.length} entries</span>
+        <span>{total} entries</span>
       </div>
 
       {loading ? (
         <div className="empty-state"><p>Loading audit logs...</p></div>
-      ) : filteredLogs.length === 0 ? (
+      ) : logs.length === 0 ? (
         <div className="empty-state">
-          <p>{logs.length === 0 ? "No audit log entries yet." : "No entries match your search."}</p>
+          <p>{hasActiveFilters ? "No entries match your filters." : "No audit log entries yet."}</p>
         </div>
       ) : (
-        <div className="audit-log-list">
-          {groupedLogs.map((group) => (
-            <div key={group.label} className="audit-log-group">
-              <div className="audit-log-date-divider">
-                <span>{group.label}</span>
-              </div>
-              {group.logs.map((log) => {
-                const IconComponent = ACTION_ICONS[log.action] || FaUser;
-                const color = ACTION_COLORS[log.action] || "#66708a";
-                const label = ACTION_LABELS[log.action] || log.action;
-                return (
-                  <article className="audit-log-item" key={log._id}>
-                    <span
-                      className="audit-log-icon"
-                      style={{ background: `${color}15`, color }}
-                    >
-                      <IconComponent />
-                    </span>
-                    <div className="audit-log-body">
-                      <div className="audit-log-headline">
-                        <strong>{log.actorName || "Unknown"}</strong>
-                        <span className={`audit-log-role audit-log-role-${log.actorRole}`}>
-                          {log.actorRole || "unknown"}
-                        </span>
-                        <span className="audit-log-action">{label}</span>
-                        {log.targetName && (
-                          <span className="audit-log-target">→ {log.targetName}</span>
-                        )}
-                      </div>
-                      {log.details && Object.keys(log.details).length > 0 && (
-                        <div className="audit-log-details">
-                          {log.details.reason && (
-                            <span className="audit-log-detail-item">
-                              <strong>Reason:</strong> {log.details.reason}
-                            </span>
-                          )}
-                          {log.details.oldRole && log.details.newRole && (
-                            <span className="audit-log-detail-item">
-                              <strong>Role:</strong> {log.details.oldRole} → {log.details.newRole}
-                            </span>
-                          )}
-                          {log.details.targetEmail && (
-                            <span className="audit-log-detail-item">
-                              <strong>Email:</strong> {log.details.targetEmail}
-                            </span>
-                          )}
-                          {log.details.postTitle && (
-                            <span className="audit-log-detail-item">
-                              <strong>Post:</strong> {log.details.postTitle}
-                            </span>
-                          )}
-                          {log.details.originalContent && (
-                            <span className="audit-log-detail-item">
-                              <strong>Original message:</strong> "{log.details.originalContent}"
-                            </span>
-                          )}
-                          {log.details.senderName && (
-                            <span className="audit-log-detail-item">
-                              <strong>Sender:</strong> {log.details.senderName}
-                            </span>
+        <>
+          <div className="audit-log-list">
+            {groupedLogs.map((group) => (
+              <div key={group.label} className="audit-log-group">
+                <div className="audit-log-date-divider">
+                  <span>{group.label}</span>
+                </div>
+                {group.logs.map((log) => {
+                  const IconComponent = ACTION_ICONS[log.action] || FaUser;
+                  const color = ACTION_COLORS[log.action] || "#66708a";
+                  const label = ACTION_LABELS[log.action] || log.action;
+                  return (
+                    <article className="audit-log-item" key={log._id}>
+                      <span
+                        className="audit-log-icon"
+                        style={{ background: `${color}15`, color }}
+                      >
+                        <IconComponent />
+                      </span>
+                      <div className="audit-log-body">
+                        <div className="audit-log-headline">
+                          <strong>{log.actorName || "Unknown"}</strong>
+                          <span className={`audit-log-role audit-log-role-${log.actorRole}`}>
+                            {log.actorRole || "unknown"}
+                          </span>
+                          <span className="audit-log-action">{label}</span>
+                          {log.targetName && (
+                            <span className="audit-log-target">→ {log.targetName}</span>
                           )}
                         </div>
-                      )}
-                      <div className="audit-log-meta">
-                        <span className="audit-log-time">{formatTime(log.createdAt)}</span>
+                        {log.details && Object.keys(log.details).length > 0 && (
+                          <div className="audit-log-details">
+                            {log.details.reason && (
+                              <span className="audit-log-detail-item">
+                                <strong>Reason:</strong> {log.details.reason}
+                              </span>
+                            )}
+                            {log.details.oldRole && log.details.newRole && (
+                              <span className="audit-log-detail-item">
+                                <strong>Role:</strong> {log.details.oldRole} → {log.details.newRole}
+                              </span>
+                            )}
+                            {log.details.targetEmail && (
+                              <span className="audit-log-detail-item">
+                                <strong>Email:</strong> {log.details.targetEmail}
+                              </span>
+                            )}
+                            {log.details.postTitle && (
+                              <span className="audit-log-detail-item">
+                                <strong>Post:</strong> {log.details.postTitle}
+                              </span>
+                            )}
+                            {log.details.originalContent && (
+                              <span className="audit-log-detail-item">
+                                <strong>Original message:</strong> "{log.details.originalContent}"
+                              </span>
+                            )}
+                            {log.details.senderName && (
+                              <span className="audit-log-detail-item">
+                                <strong>Sender:</strong> {log.details.senderName}
+                              </span>
+                            )}
+                            {log.details.bulk && (
+                              <span className="audit-log-detail-item">
+                                <strong>Bulk action</strong>
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <div className="audit-log-meta">
+                          <span className="audit-log-time">{formatTime(log.createdAt)}</span>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                );
-              })}
+                    </article>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div
+              className="audit-pagination"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                marginTop: 24
+              }}
+            >
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1 || loading}
+              >
+                <FaChevronLeft aria-hidden="true" /> Prev
+              </button>
+              <span>Page {page} of {totalPages}</span>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages || loading}
+              >
+                Next <FaChevronRight aria-hidden="true" />
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </section>
   );

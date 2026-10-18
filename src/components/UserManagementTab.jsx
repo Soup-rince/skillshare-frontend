@@ -7,13 +7,15 @@ import {
   FaUserShield,
   FaUser,
   FaBan,
-  FaUserTie
+  FaUserTie,
+  FaTrash
 } from "react-icons/fa";
 import {
   getAllUsers,
   suspendUser,
   unsuspendUser,
-  changeUserRole
+  changeUserRole,
+  bulkSuspendUsers
 } from "../api";
 import ConfirmDialog from "./ConfirmDialog";
 
@@ -55,10 +57,13 @@ function UserManagementTab() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [suspendedFilter, setSuspendedFilter] = useState("");
+  const [verifiedFilter, setVerifiedFilter] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionId, setActionId] = useState("");
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
   const token = localStorage.getItem("token");
   const myId = localStorage.getItem("userId");
 
@@ -82,6 +87,11 @@ function UserManagementTab() {
   useEffect(() => {
     loadUsers();
   }, [search, roleFilter, suspendedFilter]);
+
+  // Reset selections on filter change
+  useEffect(() => {
+    setSelectedUserIds([]);
+  }, [search, roleFilter, suspendedFilter, verifiedFilter, sortBy]);
 
   const handleSuspend = (user) => {
     setConfirmDialog({
@@ -163,6 +173,70 @@ function UserManagementTab() {
     });
   };
 
+  const handleBulkSuspend = async () => {
+    if (selectedUserIds.length === 0) return;
+    setConfirmDialog({
+      title: `Suspend ${selectedUserIds.length} users?`,
+      message: `You are about to suspend ${selectedUserIds.length} users. They will not be able to log in.`,
+      confirmLabel: "Suspend all",
+      tone: "danger",
+      inputLabel: "Reason for suspension (applies to all)",
+      inputPlaceholder: "e.g. Violation of community guidelines",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
+        try {
+          await bulkSuspendUsers({ userIds: selectedUserIds, reason }, token);
+          setSelectedUserIds([]);
+          await loadUsers();
+        } catch (err) {
+          setError(err.response?.data?.message || "Could not suspend users.");
+        } finally {
+          setConfirmDialog(null);
+        }
+      }
+    });
+  };
+
+  const toggleUserSelection = (id) => {
+    setSelectedUserIds((current) =>
+      current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+    );
+  };
+
+  // Filter + sort + search (client-side for verified + sort)
+  const filteredUsers = (() => {
+    let list = users;
+
+    if (verifiedFilter === "true") {
+      list = list.filter((u) => u.isVerified);
+    } else if (verifiedFilter === "false") {
+      list = list.filter((u) => !u.isVerified);
+    }
+
+    if (sortBy === "newest") {
+      list = [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    } else if (sortBy === "oldest") {
+      list = [...list].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    } else if (sortBy === "name") {
+      list = [...list].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    }
+
+    return list;
+  })();
+
+  const selectableUsers = filteredUsers.filter(
+    (u) => u._id !== myId && u.role !== "super_admin" && u.role !== "admin" && !u.isSuspended
+  );
+
+  const toggleAllSelectable = () => {
+    if (selectedUserIds.length === selectableUsers.length && selectableUsers.length > 0) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(selectableUsers.map((u) => u._id));
+    }
+  };
+
   return (
     <section className="admin-users">
       {error && <p className="alert" style={{ marginBottom: 16 }}>{error}</p>}
@@ -191,20 +265,57 @@ function UserManagementTab() {
           <option value="false">Active</option>
           <option value="true">Suspended</option>
         </select>
+
+        <select value={verifiedFilter} onChange={(e) => setVerifiedFilter(e.target.value)}>
+          <option value="">All verification</option>
+          <option value="true">Verified</option>
+          <option value="false">Unverified</option>
+        </select>
+
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="name">Name (A–Z)</option>
+        </select>
       </div>
 
       <div className="admin-section-title">
         <h2>User management</h2>
-        <span>{users.length} users</span>
+        <span>{filteredUsers.length} users</span>
       </div>
+
+      {selectableUsers.length > 0 && (
+        <div className="bulk-actions-bar">
+          <label className="bulk-checkbox-label">
+            <input
+              type="checkbox"
+              checked={selectedUserIds.length === selectableUsers.length && selectableUsers.length > 0}
+              onChange={toggleAllSelectable}
+            />
+            <span>Select all suspendable</span>
+          </label>
+          {selectedUserIds.length > 0 && (
+            <>
+              <span className="bulk-selected-count">{selectedUserIds.length} selected</span>
+              <button
+                className="button-danger"
+                type="button"
+                onClick={handleBulkSuspend}
+              >
+                <FaUserSlash /> Suspend selected
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div className="empty-state"><p>Loading users...</p></div>
-      ) : users.length === 0 ? (
+      ) : filteredUsers.length === 0 ? (
         <div className="empty-state"><p>No users found.</p></div>
       ) : (
         <div className="admin-post-list">
-          {users.map((user) => {
+          {filteredUsers.map((user) => {
             const isSelf = user._id === myId;
             const isSuperAdminUser = user.role === "super_admin";
             const isAdminUser = user.role === "admin";
@@ -212,9 +323,18 @@ function UserManagementTab() {
             const isMemberUser = user.role === "member";
 
             const canAct = !isSelf && !isSuperAdminUser && !isAdminUser;
+            const canBeSuspended = canAct && !user.isSuspended;
 
             return (
               <article className="admin-user-row" key={user._id}>
+                {canBeSuspended && (
+                  <input
+                    type="checkbox"
+                    checked={selectedUserIds.includes(user._id)}
+                    onChange={() => toggleUserSelection(user._id)}
+                    className="bulk-checkbox"
+                  />
+                )}
                 <div className="admin-user-info">
                   <span
                     className="admin-user-avatar"
@@ -231,6 +351,11 @@ function UserManagementTab() {
                         {getRoleIcon(user.role)}
                         <span>{user.role.replace("_", " ")}</span>
                       </span>
+                      {user.isVerified && (
+                        <span className="role-badge role-verified">
+                          ✓ Verified
+                        </span>
+                      )}
                       {user.isSuspended && (
                         <span className="suspended-badge">
                           <FaBan /> Suspended
