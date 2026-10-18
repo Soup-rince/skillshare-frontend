@@ -1,9 +1,6 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import {
-  FaCompass,
-  FaChartLine,
-  FaEnvelope,
   FaUser,
   FaSignOutAlt,
   FaCrown,
@@ -11,7 +8,7 @@ import {
   FaUserCog,
   FaChevronDown
 } from "react-icons/fa";
-import { getDashboard, getUnreadNotificationCount } from "../api";
+import { getUnreadNotificationCount } from "../api";
 import NotificationBell from "./NotificationBell";
 
 function SuperAdminNavBar() {
@@ -19,7 +16,6 @@ function SuperAdminNavBar() {
   const userId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || "Super Admin";
   const token = localStorage.getItem("token");
-  const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -30,12 +26,8 @@ function SuperAdminNavBar() {
     let cancelled = false;
     const fetchCounts = async () => {
       try {
-        const [dashRes, notifRes] = await Promise.all([
-          getDashboard(token),
-          getUnreadNotificationCount(token)
-        ]);
+        const notifRes = await getUnreadNotificationCount(token);
         if (!cancelled) {
-          setUnreadMessages(dashRes.data.unreadMessages || 0);
           setUnreadNotifications(notifRes.data.count || 0);
         }
       } catch {
@@ -95,21 +87,6 @@ function SuperAdminNavBar() {
       </div>
 
       <div className="superadmin-nav-links">
-        <NavLink className="superadmin-nav-link" to="/browse">
-          <FaCompass className="superadmin-nav-icon" aria-hidden="true" />
-          <span>Browse</span>
-        </NavLink>
-        <NavLink className="superadmin-nav-link" to="/dashboard">
-          <FaChartLine className="superadmin-nav-icon" aria-hidden="true" />
-          <span>Dashboard</span>
-        </NavLink>
-        <NavLink className="superadmin-nav-link" to="/messages">
-          <FaEnvelope className="superadmin-nav-icon" aria-hidden="true" />
-          <span>Messages</span>
-          {unreadMessages > 0 && (
-            <span className="nav-badge">{unreadMessages > 99 ? "99+" : unreadMessages}</span>
-          )}
-        </NavLink>
         <NavLink className="superadmin-nav-link superadmin-panel-link" to="/superadmin">
           <FaCrown className="superadmin-nav-icon" aria-hidden="true" />
           <span>Super Admin</span>

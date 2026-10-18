@@ -5,11 +5,33 @@ import { getUserProfile, updateProfile } from "../api";
 import { useUnsavedChangesWarning } from "../hooks/useUnsavedChangesWarning";
 import { useConfirm } from "../contexts/ConfirmContext";
 
+function getInitials(name) {
+  if (!name) return "?";
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function getAvatarColor(name) {
+  const palette = ["#2639ba", "#087b75", "#7c3aed", "#c2410c", "#be123c", "#0369a1"];
+  if (!name) return palette[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return palette[Math.abs(hash) % palette.length];
+}
+
 function EditProfile() {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId");
+  const [userName, setUserName] = useState("");
   const [bio, setBio] = useState("");
   const [interestsInput, setInterestsInput] = useState("");
   const [hobbiesInput, setHobbiesInput] = useState("");
@@ -25,6 +47,7 @@ function EditProfile() {
       try {
         const res = await getUserProfile(userId, token);
         const { user } = res.data;
+        setUserName(user.name || "");
         const loaded = {
           bio: user.bio || "",
           interestsInput: (user.interests || []).join(", "),
@@ -107,7 +130,7 @@ function EditProfile() {
   }
 
   return (
-    <main className="page-container profile-page">
+    <main className="page-container edit-profile-page">
       <header className="page-heading">
         <div>
           <p className="eyebrow">Your profile</p>
@@ -116,85 +139,103 @@ function EditProfile() {
         </div>
       </header>
 
-      <section className="content-card post-form">
-        <form className="form-stack" onSubmit={handleSubmit}>
-          {error && <p className="alert">{error}</p>}
-          {success && <p className="alert" style={{ background: "#eaf3de", color: "#3b6d11" }}>{success}</p>}
-
-          <div className="field">
-            <label htmlFor="profile-bio">Bio</label>
-            <textarea
-              id="profile-bio"
-              placeholder="Tell others a little about yourself, your skills, and what you want to learn."
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="profile-interests">Interests</label>
-            <input
-              id="profile-interests"
-              placeholder="Separate with commas: Music, Programming, Language"
-              value={interestsInput}
-              onChange={(e) => setInterestsInput(e.target.value)}
-            />
-            <small className="field-hint">Separate each interest with a comma.</small>
-          </div>
-
-          <div className="field">
-            <label htmlFor="profile-hobbies">Hobbies</label>
-            <input
-              id="profile-hobbies"
-              placeholder="Separate with commas: Guitar, Reading, Hiking"
-              value={hobbiesInput}
-              onChange={(e) => setHobbiesInput(e.target.value)}
-            />
-            <small className="field-hint">Separate each hobby with a comma.</small>
-          </div>
-
-          <div className="field">
-            <label htmlFor="profile-availability">Availability</label>
-            <input
-              id="profile-availability"
-              placeholder="e.g., Weekends, Weekday evenings, Flexible"
-              value={availability}
-              onChange={(e) => setAvailability(e.target.value)}
-            />
-            <small className="field-hint">When are you usually available for skill exchanges?</small>
-          </div>
-
-          <div className="field">
-            <label htmlFor="profile-learning-style">Preferred learning style</label>
-            <select
-              id="profile-learning-style"
-              value={preferredLearningStyle}
-              onChange={(e) => setPreferredLearningStyle(e.target.value)}
+      <div className="edit-profile-grid">
+        <aside className="edit-profile-sidebar">
+          <div className="edit-profile-avatar-card">
+            <div
+              className="edit-profile-avatar"
+              style={{ background: getAvatarColor(userName) }}
             >
-              <option value="">Not specified</option>
-              <option value="visual">Visual (diagrams, videos)</option>
-              <option value="auditory">Auditory (listening, discussion)</option>
-              <option value="kinesthetic">Kinesthetic (hands-on practice)</option>
-              <option value="reading">Reading/Writing (notes, articles)</option>
-            </select>
+              {getInitials(userName)}
+            </div>
+            <h2>{userName || "Your Name"}</h2>
+            <p>SkillShare member</p>
           </div>
+        </aside>
 
-          <div className="form-actions">
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={handleCancel}
-            >
-              <FaTimes aria-hidden="true" />
-              <span>Cancel</span>
-            </button>
-            <button type="submit" className="button">
-              <FaSave aria-hidden="true" />
-              <span>Save changes</span>
-            </button>
-          </div>
-        </form>
-      </section>
+        <section className="edit-profile-main">
+          <form className="edit-profile-form" onSubmit={handleSubmit}>
+            {error && <p className="alert">{error}</p>}
+            {success && <p className="alert" style={{ background: "#eaf3de", color: "#3b6d11" }}>{success}</p>}
+
+            <div className="edit-profile-fields">
+              <div className="field">
+                <label htmlFor="profile-bio">Bio</label>
+                <textarea
+                  id="profile-bio"
+                  placeholder="Tell others a little about yourself, your skills, and what you want to learn."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                />
+                <small className="field-hint">A short summary helps other members understand what you offer.</small>
+              </div>
+
+              <div className="field">
+                <label htmlFor="profile-interests">Interests</label>
+                <input
+                  id="profile-interests"
+                  placeholder="Separate with commas: Music, Programming, Language"
+                  value={interestsInput}
+                  onChange={(e) => setInterestsInput(e.target.value)}
+                />
+                <small className="field-hint">Separate each interest with a comma.</small>
+              </div>
+
+              <div className="field">
+                <label htmlFor="profile-hobbies">Hobbies</label>
+                <input
+                  id="profile-hobbies"
+                  placeholder="Separate with commas: Guitar, Reading, Hiking"
+                  value={hobbiesInput}
+                  onChange={(e) => setHobbiesInput(e.target.value)}
+                />
+                <small className="field-hint">Separate each hobby with a comma.</small>
+              </div>
+
+              <div className="field">
+                <label htmlFor="profile-availability">Availability</label>
+                <input
+                  id="profile-availability"
+                  placeholder="e.g., Weekends, Weekday evenings, Flexible"
+                  value={availability}
+                  onChange={(e) => setAvailability(e.target.value)}
+                />
+                <small className="field-hint">When are you usually available for skill exchanges?</small>
+              </div>
+
+              <div className="field">
+                <label htmlFor="profile-learning-style">Preferred learning style</label>
+                <select
+                  id="profile-learning-style"
+                  value={preferredLearningStyle}
+                  onChange={(e) => setPreferredLearningStyle(e.target.value)}
+                >
+                  <option value="">Not specified</option>
+                  <option value="visual">Visual (diagrams, videos)</option>
+                  <option value="auditory">Auditory (listening, discussion)</option>
+                  <option value="kinesthetic">Kinesthetic (hands-on practice)</option>
+                  <option value="reading">Reading/Writing (notes, articles)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="edit-profile-actions">
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={handleCancel}
+              >
+                <FaTimes aria-hidden="true" />
+                <span>Cancel</span>
+              </button>
+              <button type="submit" className="button">
+                <FaSave aria-hidden="true" />
+                <span>Save changes</span>
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
     </main>
   );
 }

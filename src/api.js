@@ -487,3 +487,8 @@ export const runBackupNow = (data, token) =>
   axios.post(`${API_URL}/superadmin/system/notifications/cleanup`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
+export const sendTestEmail = (data, token) =>
+  axios.post(`${API_URL}/superadmin/system/test-email`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });

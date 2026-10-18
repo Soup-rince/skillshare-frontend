@@ -40,7 +40,6 @@ function Browse() {
   const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState("posts");
 
-  // Posts state
   const [posts, setPosts] = useState([]);
   const [matches, setMatches] = useState([]);
   const [keyword, setKeyword] = useState("");
@@ -49,7 +48,6 @@ function Browse() {
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState("");
 
-  // Members state
   const [memberQuery, setMemberQuery] = useState("");
   const [members, setMembers] = useState([]);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -153,13 +151,18 @@ function Browse() {
   };
 
   return (
-    <main className="page-container">
-      <header className="page-heading">
-        <div>
+    <main className="page-container browse-page">
+      <header className="browse-hero">
+        <div className="browse-hero-text">
           <p className="eyebrow">Community skills</p>
           <h1>Explore skill exchanges</h1>
-          <p>Discover what people can teach and what they want to learn.</p>
+          <p className="browse-hero-sub">
+            Discover what people can teach and what they want to learn.
+          </p>
         </div>
+        <Link className="browse-hero-cta" to="/create-post">
+          + Share a skill
+        </Link>
       </header>
 
       <div className="browse-tabs" role="tablist" aria-label="Browse mode">
@@ -186,46 +189,48 @@ function Browse() {
       {activeTab === "posts" && (
         <>
           {matches.length > 0 && (
-            <section className="matches-section" aria-label="Recommended for you">
-              <div className="matches-header">
-                <h2>
+            <section className="browse-section" aria-label="Recommended for you">
+              <div className="browse-section-header">
+                <h2 className="browse-section-title">
                   <FaStar aria-hidden="true" />
                   <span>Recommended for you</span>
                 </h2>
-                <p>Based on your skills, interests, and availability</p>
+                <p className="browse-section-sub">
+                  Based on your skills, interests, and availability
+                </p>
               </div>
-              <div className="matches-scroll">
+              <div className="browse-scroll-row">
                 {matches.map((match) => {
                   const post = match.post;
                   const ownerName = post?.owner?.name || "SkillShare member";
                   const scorePercent = Math.round((match.matchScore || 0) * 100);
                   return (
                     <Link
-                      className="match-card"
+                      className="browse-match-card"
                       key={match.postId}
                       to={`/posts/${match.postId}`}
                     >
-                      <div className="match-score-badge">
+                      <div className="browse-match-score">
                         {scorePercent}% match
                       </div>
-                      <div className="match-card-body">
+                      <div className="browse-match-body">
                         <span
-                          className="match-avatar"
+                          className="browse-avatar browse-avatar-sm"
                           style={{ background: getAvatarColor(ownerName) }}
                           aria-hidden="true"
                         >
                           {getInitials(ownerName)}
                         </span>
-                        <div className="match-info">
+                        <div className="browse-match-info">
                           <strong>{post?.title || "Untitled post"}</strong>
-                          <span className="match-owner">by {ownerName}</span>
+                          <span className="browse-match-owner">by {ownerName}</span>
                         </div>
                       </div>
-                      <div className="match-card-footer">
-                        <span className={`tag ${post?.postType === "offer" ? "tag-offer" : "tag-request"}`}>
+                      <div className="browse-match-footer">
+                        <span className={`browse-pill ${post?.postType === "offer" ? "browse-pill-offer" : "browse-pill-request"}`}>
                           {post?.postType}
                         </span>
-                        <span className="match-category">{post?.category}</span>
+                        <span className="browse-match-category">{post?.category}</span>
                       </div>
                     </Link>
                   );
@@ -234,69 +239,115 @@ function Browse() {
             </section>
           )}
 
-          <section className="share-banner" aria-label="Share a skill">
-            <div className="share-banner-text">
-              <h2>Have a skill to share?</h2>
-              <p>Post what you can teach or what you want to learn,  someone out there is looking for exactly that.</p>
-            </div>
-            <Link className="button share-banner-cta" to="/create-post">+ Share a skill</Link>
-          </section>
-
-          <form className="toolbar" onSubmit={handleSearch}>
-            <input aria-label="Search skill posts" placeholder="Search a skill, topic, or keyword" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
-            <select aria-label="Filter by category" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <form className="browse-toolbar" onSubmit={handleSearch}>
+            <input
+              className="browse-input"
+              aria-label="Search skill posts"
+              placeholder="Search a skill, topic, or keyword"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+            />
+            <select
+              className="browse-select"
+              aria-label="Filter by category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
               <option value="">All categories</option>
               {CATEGORIES.map((cat) => (
                 <option key={cat.value} value={cat.value}>{cat.label}</option>
               ))}
             </select>
-            <select aria-label="Filter by post type" value={postType} onChange={(e) => setPostType(e.target.value)}>
-              <option value="">Offers and requests</option><option value="offer">Offers</option><option value="request">Requests</option>
+            <select
+              className="browse-select"
+              aria-label="Filter by post type"
+              value={postType}
+              onChange={(e) => setPostType(e.target.value)}
+            >
+              <option value="">Offers and requests</option>
+              <option value="offer">Offers</option>
+              <option value="request">Requests</option>
             </select>
-            <button className="button" type="submit">Search</button>
+            <button className="browse-btn-primary" type="submit">
+              Search
+            </button>
           </form>
 
           {error && <p className="alert" style={{ marginTop: 18 }}>{error}</p>}
-          {!error && posts.length === 0 && <div className="empty-state"><h2>No skill posts found</h2><p>Try changing your filters or be the first to share a skill.</p></div>}
 
-          <section className="post-grid" aria-label="Skill posts">
+          {!error && posts.length === 0 && (
+            <div className="browse-empty">
+              <div className="browse-empty-icon">🔍</div>
+              <h2>No skill posts found</h2>
+              <p>Try changing your filters or be the first to share a skill.</p>
+              <Link className="browse-btn-primary" to="/create-post">
+                + Share a skill
+              </Link>
+            </div>
+          )}
+
+          <section className="browse-feed" aria-label="Skill posts">
             {posts.map((post) => {
               const ownerName = post.owner?.name || "SkillShare member";
+              const hasImage = post.images && post.images.length > 0;
               return (
-                <Link className="post-card" key={post._id} to={`/posts/${post._id}`}>
-                  <div className="post-card-header">
+                <Link className="browse-feed-card" key={post._id} to={`/posts/${post._id}`}>
+                  <div className="browse-feed-header">
                     <span
-                      className="post-avatar"
+                      className="browse-avatar browse-avatar-md"
                       style={{ background: getAvatarColor(ownerName) }}
                       aria-hidden="true"
                     >
                       {getInitials(ownerName)}
                     </span>
-                    <span className={`tag ${post.postType === "offer" ? "tag-offer" : "tag-request"}`}>{post.postType}</span>
+                    <div className="browse-feed-header-info">
+                      <span className="browse-feed-owner">{ownerName}</span>
+                      <span className="browse-feed-meta">
+                        {post.category} · {post.proficiencyLevel}
+                      </span>
+                    </div>
+                    <span className={`browse-pill ${post.postType === "offer" ? "browse-pill-offer" : "browse-pill-request"}`}>
+                      {post.postType}
+                    </span>
                   </div>
-                  {post.images && post.images.length > 0 && (
-                    <div className="post-card-image">
-                      <img
-                        src={post.images[0]}
-                        alt={post.title}
-                        className="post-card-image-thumb"
-                      />
+
+                  <div className="browse-feed-body">
+                    <h2 className="browse-feed-title">{post.title}</h2>
+                    {post.description && (
+                      <p className="browse-feed-desc">{post.description}</p>
+                    )}
+                    {post.aiTags && post.aiTags.length > 0 && (
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '12px' }}>
+                        {post.aiTags.map((tag, idx) => (
+                          <span key={idx} style={{ background: '#f0f2ff', color: '#2639ba', fontSize: '11px', padding: '3px 8px', borderRadius: '99px', fontWeight: '600' }}>
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {hasImage && (
+                    <div className="browse-feed-image">
+                      <img src={post.images[0]} alt={post.title} />
                       {post.images.length > 1 && (
-                        <span className="post-card-image-count">
-                          +{post.images.length - 1}
+                        <span className="browse-feed-image-count">
+                          +{post.images.length - 1} more
                         </span>
                       )}
                     </div>
                   )}
-                  <h2>{post.title}</h2>
-                  <p className="post-description">{post.description}</p>
-                  <p className="post-meta">{post.category} · {post.proficiencyLevel} · by {ownerName}</p>
-                  <span className="post-card-link">View details →</span>
+
+                  <div className="browse-feed-footer">
+                    <span className="browse-feed-view">
+                      View details →
+                    </span>
+                  </div>
 
                   {canDeleteAny && (
                     <button
                       type="button"
-                      className="post-card-admin-delete"
+                      className="browse-feed-delete"
                       onClick={(e) => handleDeletePost(e, post)}
                       disabled={deletingId === post._id}
                       aria-label="Delete post"
@@ -313,8 +364,9 @@ function Browse() {
 
       {activeTab === "members" && (
         <section aria-label="Members">
-          <form className="toolbar" onSubmit={(e) => e.preventDefault()}>
+          <form className="browse-toolbar" onSubmit={(e) => e.preventDefault()}>
             <input
+              className="browse-input"
               aria-label="Search members"
               placeholder="Search members by name, bio, interests, or hobbies"
               value={memberQuery}
@@ -325,11 +377,14 @@ function Browse() {
           {membersError && <p className="alert" style={{ marginTop: 18 }}>{membersError}</p>}
 
           {membersLoading && (
-            <div className="empty-state"><p>Searching members…</p></div>
+            <div className="browse-empty">
+              <p>Searching members…</p>
+            </div>
           )}
 
           {!membersLoading && !membersError && members.length === 0 && (
-            <div className="empty-state">
+            <div className="browse-empty">
+              <div className="browse-empty-icon">👥</div>
               <h2>No members found</h2>
               <p>
                 {memberQuery
@@ -341,7 +396,7 @@ function Browse() {
 
           {!membersLoading && members.length > 0 && (
             <>
-              <section className="user-grid" aria-label="Members">
+              <section className="browse-member-grid" aria-label="Members">
                 {members.map((user) => {
                   const displayName = user.name || "SkillShare member";
                   const tags = [
@@ -350,23 +405,23 @@ function Browse() {
                   ];
                   return (
                     <Link
-                      className="user-card"
+                      className="browse-member-card"
                       key={user._id}
                       to={`/profile/${user._id}`}
                     >
                       <span
-                        className="user-avatar"
+                        className="browse-avatar browse-avatar-md"
                         style={{ background: getAvatarColor(displayName) }}
                         aria-hidden="true"
                       >
                         {getInitials(displayName)}
                       </span>
-                      <h2 className="user-name">{displayName}</h2>
-                      {user.bio && <p className="user-bio">{user.bio}</p>}
+                      <h2 className="browse-member-name">{displayName}</h2>
+                      {user.bio && <p className="browse-member-bio">{user.bio}</p>}
                       {tags.length > 0 && (
-                        <div className="user-tags">
+                        <div className="browse-member-tags">
                           {tags.map((tag, i) => (
-                            <span key={i} className="user-tag">{tag}</span>
+                            <span key={i} className="browse-member-tag">{tag}</span>
                           ))}
                         </div>
                       )}
@@ -376,21 +431,21 @@ function Browse() {
               </section>
 
               {membersTotalPages > 1 && (
-                <div className="pagination">
+                <div className="browse-pagination">
                   <button
                     type="button"
-                    className="button"
+                    className="browse-btn-secondary"
                     disabled={membersPage === 1}
                     onClick={() => setMembersPage((p) => Math.max(1, p - 1))}
                   >
                     ← Prev
                   </button>
-                  <span className="pagination-info">
+                  <span className="browse-pagination-info">
                     Page {membersPage} of {membersTotalPages}
                   </span>
                   <button
                     type="button"
-                    className="button"
+                    className="browse-btn-secondary"
                     disabled={membersPage === membersTotalPages}
                     onClick={() => setMembersPage((p) => Math.min(membersTotalPages, p + 1))}
                   >

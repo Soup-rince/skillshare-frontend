@@ -5,9 +5,10 @@ import {
   FaCheckCircle,
   FaExclamationTriangle,
   FaSyncAlt,
-  FaBell
+  FaBell,
+  FaEnvelope
 } from "react-icons/fa";
-import { runBackupNow, getSystemHealth, clearOldNotifications } from "../api";
+import { runBackupNow, getSystemHealth, clearOldNotifications, sendTestEmail } from "../api";
 import ConfirmDialog from "./ConfirmDialog";
 
 function OperationsTab() {
@@ -15,6 +16,7 @@ function OperationsTab() {
   const [healthLoading, setHealthLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [cleaning, setCleaning] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [confirmDialog, setConfirmDialog] = useState(null);
@@ -99,6 +101,34 @@ function OperationsTab() {
           setError(err.response?.data?.message || "Could not clear notifications.");
         } finally {
           setCleaning(false);
+          setConfirmDialog(null);
+        }
+      }
+    });
+  };
+
+  const handleSendTestEmail = () => {
+    setConfirmDialog({
+      title: "Send test email",
+      message:
+        "This will send a test email to your own super admin account email to verify the email service works end-to-end.",
+      confirmLabel: "Send test email",
+      tone: "info",
+      inputLabel: "Reason for sending this test email",
+      inputPlaceholder: "e.g. Verify email delivery after SMTP change",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
+        setSendingEmail(true);
+        setError("");
+        setSuccess("");
+        try {
+          const res = await sendTestEmail({ reason }, token);
+          setSuccess(`Test email sent to ${res.data.to} — check your inbox.`);
+        } catch (err) {
+          setError(err.response?.data?.message || "Could not send test email.");
+        } finally {
+          setSendingEmail(false);
           setConfirmDialog(null);
         }
       }
@@ -249,6 +279,58 @@ function OperationsTab() {
           >
             <FaBell aria-hidden="true" />
             <span>{cleaning ? "Clearing…" : "Clear old notifications"}</span>
+          </button>
+        </div>
+      </div>
+
+      <div
+        className="system-health-card"
+        style={{
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 10,
+          padding: "18px 20px",
+          marginTop: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          flexWrap: "wrap"
+        }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 44,
+            height: 44,
+            borderRadius: 10,
+            background: "#2639ba15",
+            color: "#2639ba",
+            flexShrink: 0
+          }}
+        >
+          <FaEnvelope />
+        </span>
+
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <strong style={{ display: "block", marginBottom: 4 }}>Send test email</strong>
+          <div style={{ fontSize: 13, color: "#66708a" }}>
+            Sends a test email to your own super admin account to verify the
+            email service works end-to-end. The health check only verifies SMTP
+            connect — this actually delivers.
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="button"
+            onClick={handleSendTestEmail}
+            disabled={sendingEmail}
+          >
+            <FaEnvelope aria-hidden="true" />
+            <span>{sendingEmail ? "Sending…" : "Send test email"}</span>
           </button>
         </div>
       </div>

@@ -1,39 +1,74 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaTrash, FaCheck, FaSearch, FaExclamationTriangle, FaArrowLeft } from "react-icons/fa";
+import {
+  FaTrash,
+  FaCheck,
+  FaSearch,
+  FaExclamationTriangle,
+  FaArrowLeft,
+  FaHistory,
+  FaFlag,
+  FaUser,
+  FaFileAlt,
+  FaShieldAlt,
+  FaChartBar
+} from "react-icons/fa";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from "recharts";
 import {
   checkAdmin,
   getSkillPosts,
   deletePost,
   getReports,
   updateReportStatus,
+  updateModeratorReportStatus,
+  deleteMessageByModerator,
+  getModeratorStats,
+  bulkUpdateReportStatus
 } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog";
+import ReportedMessageModal from "../components/ReportedMessageModal";
 
 function AdminEmergencyDashboard() {
   const navigate = useNavigate();
   const [accessGranted, setAccessGranted] = useState(null);
   const [posts, setPosts] = useState([]);
   const [reports, setReports] = useState([]);
-  const [activeTab, setActiveTab] = useState("posts");
+  const [stats, setStats] = useState(null);
+  const [activeTab, setActiveTab] = useState("reports");
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState("");
   const [reportActionId, setReportActionId] = useState("");
   const [postSearch, setPostSearch] = useState("");
   const [reportSearch, setReportSearch] = useState("");
+  const [reportTypeFilter, setReportTypeFilter] = useState("all");
+  const [reportStatusFilter, setReportStatusFilter] = useState("all");
+  const [reportReasonFilter, setReportReasonFilter] = useState("all");
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [previewReport, setPreviewReport] = useState(null);
+  const [selectedPostIds, setSelectedPostIds] = useState([]);
+  const [selectedReportIds, setSelectedReportIds] = useState([]);
 
   const token = localStorage.getItem("token");
   const userRole = localStorage.getItem("role");
 
-  const loadAdminData = async () => {
+  const loadData = async () => {
     await checkAdmin(token);
-    const [postsResponse, reportsResponse] = await Promise.all([
+    const [postsRes, reportsRes, statsRes] = await Promise.all([
       getSkillPosts(),
       getReports({}, token),
+      getModeratorStats(token).catch(() => ({ data: null }))
     ]);
-    setPosts(postsResponse.data);
-    setReports(reportsResponse.data);
+    setPosts(postsRes.data);
+    setReports(reportsRes.data);
+    if (statsRes?.data) setStats(statsRes.data);
   };
 
   useEffect(() => {
@@ -44,7 +79,7 @@ function AdminEmergencyDashboard() {
         return;
       }
       try {
-        await loadAdminData();
+        await loadData();
         setAccessGranted(true);
       } catch (err) {
         setAccessGranted(false);
@@ -57,23 +92,38 @@ function AdminEmergencyDashboard() {
     init();
   }, [token, userRole]);
 
-  const handleDelete = (postId, postTitle) => {
+  useEffect(() => {
+    setSelectedPostIds([]);
+    setSelectedReportIds([]);
+  }, [activeTab]);
+
+  const loadStats = async () => {
+    try {
+      const res = await getModeratorStats(token);
+      setStats(res.data);
+    } catch {
+    }
+  };
+
+  const handleDeletePost = (postId, postTitle) => {
     setConfirmDialog({
       title: "Delete this post?",
-      message: `[EMERGENCY MODE] The post "${postTitle}" will be permanently deleted. This action cannot be undone. The post owner will be notified.`,
+      message: `[EMERGENCY MODE] The post "${postTitle}" will be permanently deleted. This cannot be undone. The post owner will be notified.`,
       confirmLabel: "Delete post",
       cancelLabel: "Cancel",
       tone: "danger",
-      onConfirm: async () => {
+      inputLabel: "Reason for deletion",
+      inputPlaceholder: "e.g. Violation of community guidelines",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
         setDeletingId(postId);
         setError("");
         try {
-          await deletePost(postId, token);
-          setPosts((currentPosts) =>
-            currentPosts.filter((post) => post._id !== postId)
-          );
-          setReports((currentReports) =>
-            currentReports.filter((r) => r.post?._id !== postId)
+          await deletePost(postId, { reason }, token);
+          setPosts((current) => current.filter((p) => p._id !== postId));
+          setReports((current) =>
+            current.filter((r) => r.post?._id !== postId)
           );
         } catch (err) {
           setError(
@@ -87,59 +137,108 @@ function AdminEmergencyDashboard() {
     });
   };
 
+  const handleBulkDeletePosts = () => {
+    if (selectedPostIds.length === 0) return;
+    setConfirmDialog({
+      title: `Delete ${selectedPostIds.length} post(s)?`,
+      message: `[EMERGENCY MODE] You are about to permanently delete ${selectedPostIds.length} post(s). This cannot be undone.`,
+      confirmLabel: "Delete all",
+      cancelLabel: "Cancel",
+      tone: "danger",
+      inputLabel: "Reason for deletion (applies to all)",
+      inputPlaceholder: "e.g. Spam wave cleanup",
+      inputRequired: true,
+      inputMinLength: 5,
+      onConfirm: async (reason) => {
+        setError("");
+        try {
+          await Promise.all(
+            selectedPostIds.map((id) => deletePost(id, { reason }, token))
+          );
+          setPosts((current) =>
+            current.filter((p) => !selectedPostIds.includes(p._id))
+          );
+          setReports((current) =>
+            current.filter((r) => !selectedPostIds.includes(r.post?._id))
+          );
+          setSelectedPostIds([]);
+        } catch (err) {
+          setError(
+            err.response?.data?.message || "Unable to bulk delete posts."
+          );
+        } finally {
+          setConfirmDialog(null);
+        }
+      }
+    });
+  };
+
   const handleReportAction = (reportId, action) => {
     const report = reports.find((r) => r._id === reportId);
-    const postTitle = report?.post?.title || "the reported post";
+    const isUserReport = report?.targetType === "user";
+    const isMessageReport = report?.targetType === "message";
+    const targetLabel = isUserReport
+      ? report?.targetUser?.name || "the reported user"
+      : isMessageReport
+        ? `message from ${report?.targetUser?.name || "a user"}`
+        : report?.post?.title || "the reported post";
 
     if (action === "dismiss") {
       setConfirmDialog({
         title: "Dismiss this report?",
-        message: `[EMERGENCY MODE] The report on "${postTitle}" will be marked as dismissed. The post will remain visible.`,
+        message: `[EMERGENCY MODE] The report on "${targetLabel}" will be marked as dismissed. No action will be taken.`,
         confirmLabel: "Dismiss report",
         cancelLabel: "Cancel",
         tone: "info",
-        onConfirm: async () => {
+        inputLabel: "Note to reporter (optional)",
+        inputPlaceholder: "Leave blank for default message",
+        inputRequired: false,
+        inputMinLength: 0,
+        onConfirm: async (reason) => {
           setReportActionId(reportId);
           setError("");
           try {
-            const res = await updateReportStatus(
+            const res = await updateModeratorReportStatus(
               reportId,
-              {
-                status: "dismissed",
-                adminNote: `[Emergency action by super admin] After careful review of the report on "${postTitle}", we determined that the content does not violate our community guidelines. No action has been taken.`
-              },
+              { status: "dismissed", reason: reason || "" },
               token
             );
             setReports((current) =>
-              current.map((r) => (r._id === reportId ? { ...r, ...res.data } : r))
+              current.map((r) =>
+                r._id === reportId ? { ...r, ...res.data } : r
+              )
             );
+            await loadStats();
           } catch (err) {
-            setError(err.response?.data?.message || "Unable to update this report.");
+            setError(
+              err.response?.data?.message || "Unable to update this report."
+            );
           } finally {
             setReportActionId("");
             setConfirmDialog(null);
           }
         }
       });
-    } else if (action === "delete") {
+    } else if (action === "delete" && !isUserReport && !isMessageReport) {
       setConfirmDialog({
         title: "Delete this post?",
-        message: `[EMERGENCY MODE] The post "${postTitle}" will be permanently deleted and the report will be resolved. This action cannot be undone.`,
+        message: `[EMERGENCY MODE] The post "${targetLabel}" will be permanently deleted and the report will be resolved. This cannot be undone.`,
         confirmLabel: "Delete post",
         cancelLabel: "Cancel",
         tone: "danger",
-        onConfirm: async () => {
+        inputLabel: "Reason for deletion",
+        inputPlaceholder: "e.g. Violation of community guidelines",
+        inputRequired: true,
+        inputMinLength: 5,
+        onConfirm: async (reason) => {
           setReportActionId(reportId);
           setError("");
           try {
             if (!report?.post?._id) return;
-            await deletePost(report.post._id, token);
-            await updateReportStatus(
+            await deletePost(report.post._id, { reason }, token);
+            await updateModeratorReportStatus(
               reportId,
-              {
-                status: "resolved",
-                adminNote: `[Emergency action by super admin] After reviewing the report, we determined that the post violated our community guidelines. The post has been removed.`
-              },
+              { status: "resolved", reason },
               token
             );
             setPosts((current) =>
@@ -148,22 +247,237 @@ function AdminEmergencyDashboard() {
             setReports((current) =>
               current.map((r) =>
                 r._id === reportId
-                  ? {
-                      ...r,
-                      status: "resolved",
-                      adminNote: `[Emergency action by super admin] Post removed.`
-                    }
+                  ? { ...r, status: "resolved", adminNote: reason }
                   : r
               )
             );
+            await loadStats();
           } catch (err) {
-            setError(err.response?.data?.message || "Unable to update this report.");
+            setError(
+              err.response?.data?.message || "Unable to update this report."
+            );
           } finally {
             setReportActionId("");
             setConfirmDialog(null);
           }
         }
       });
+    } else if (action === "resolve_user" && !isMessageReport) {
+      setConfirmDialog({
+        title: "Warn this user?",
+        message: `[EMERGENCY MODE] The report on "${targetLabel}" will be resolved. The user will receive a warning notification.`,
+        confirmLabel: "Send warning",
+        cancelLabel: "Cancel",
+        tone: "info",
+        inputLabel: "Message to user (optional)",
+        inputPlaceholder: "e.g. Please review our community guidelines",
+        inputRequired: false,
+        inputMinLength: 0,
+        onConfirm: async (reason) => {
+          setReportActionId(reportId);
+          setError("");
+          try {
+            const res = await updateModeratorReportStatus(
+              reportId,
+              { status: "resolved", reason: reason || "" },
+              token
+            );
+            setReports((current) =>
+              current.map((r) =>
+                r._id === reportId ? { ...r, ...res.data } : r
+              )
+            );
+            await loadStats();
+          } catch (err) {
+            setError(
+              err.response?.data?.message || "Unable to update this report."
+            );
+          } finally {
+            setReportActionId("");
+            setConfirmDialog(null);
+          }
+        }
+      });
+    } else if (action === "escalate") {
+      setConfirmDialog({
+        title: "Escalate this report to admin?",
+        message: `[EMERGENCY MODE] The report on "${targetLabel}" will be flagged for admin review. The admin team will decide whether to suspend the user.`,
+        confirmLabel: "Escalate",
+        cancelLabel: "Cancel",
+        tone: "danger",
+        inputLabel: "Note for admin (optional)",
+        inputPlaceholder: "e.g. Multiple reports, repeated violations",
+        inputRequired: false,
+        inputMinLength: 0,
+        onConfirm: async (reason) => {
+          setReportActionId(reportId);
+          setError("");
+          try {
+            const res = await updateModeratorReportStatus(
+              reportId,
+              { status: "escalated", reason: reason || "" },
+              token
+            );
+            setReports((current) =>
+              current.map((r) =>
+                r._id === reportId ? { ...r, ...res.data } : r
+              )
+            );
+            await loadStats();
+          } catch (err) {
+            setError(
+              err.response?.data?.message || "Unable to escalate this report."
+            );
+          } finally {
+            setReportActionId("");
+            setConfirmDialog(null);
+          }
+        }
+      });
+    } else if (action === "delete_message") {
+      setConfirmDialog({
+        title: "Delete this message?",
+        message: `[EMERGENCY MODE] The message from ${report?.targetUser?.name || "this user"} will be removed from the conversation. The sender will be notified with the reason you provide.`,
+        confirmLabel: "Delete message",
+        cancelLabel: "Cancel",
+        tone: "danger",
+        inputLabel: "Reason for deletion",
+        inputPlaceholder: "e.g. Harassment, offensive language",
+        inputRequired: true,
+        inputMinLength: 5,
+        onConfirm: async (reason) => {
+          setReportActionId(reportId);
+          setError("");
+          try {
+            await deleteMessageByModerator(report.message._id, { reason }, token);
+            setReports((current) =>
+              current.map((r) =>
+                r._id === reportId
+                  ? { ...r, status: "resolved", adminNote: reason }
+                  : r
+              )
+            );
+            await loadStats();
+          } catch (err) {
+            setError(
+              err.response?.data?.message || "Unable to delete this message."
+            );
+          } finally {
+            setReportActionId("");
+            setConfirmDialog(null);
+          }
+        }
+      });
+    }
+  };
+
+  const handleBulkDismissReports = () => {
+    if (selectedReportIds.length === 0) return;
+    setConfirmDialog({
+      title: `Dismiss ${selectedReportIds.length} report(s)?`,
+      message: `[EMERGENCY MODE] All selected reports will be marked as dismissed. No action will be taken.`,
+      confirmLabel: "Dismiss all",
+      cancelLabel: "Cancel",
+      tone: "info",
+      inputLabel: "Note to reporters (optional)",
+      inputPlaceholder: "Leave blank for default message",
+      inputRequired: false,
+      inputMinLength: 0,
+      onConfirm: async (reason) => {
+        setError("");
+        try {
+          await bulkUpdateReportStatus(
+            { reportIds: selectedReportIds, status: "dismissed", reason: reason || "" },
+            token
+          );
+          setReports((current) =>
+            current.map((r) =>
+              selectedReportIds.includes(r._id)
+                ? { ...r, status: "dismissed", adminNote: reason || "" }
+                : r
+            )
+          );
+          setSelectedReportIds([]);
+          await loadStats();
+        } catch (err) {
+          setError(
+            err.response?.data?.message || "Unable to bulk dismiss reports."
+          );
+        } finally {
+          setConfirmDialog(null);
+        }
+      }
+    });
+  };
+
+  const handleBulkEscalateReports = () => {
+    if (selectedReportIds.length === 0) return;
+    setConfirmDialog({
+      title: `Escalate ${selectedReportIds.length} report(s)?`,
+      message: `[EMERGENCY MODE] All selected reports will be flagged for admin review.`,
+      confirmLabel: "Escalate all",
+      cancelLabel: "Cancel",
+      tone: "danger",
+      inputLabel: "Note for admin (optional)",
+      inputPlaceholder: "e.g. Multiple reports, repeated violations",
+      inputRequired: false,
+      inputMinLength: 0,
+      onConfirm: async (reason) => {
+        setError("");
+        try {
+          await bulkUpdateReportStatus(
+            { reportIds: selectedReportIds, status: "escalated", reason: reason || "" },
+            token
+          );
+          setReports((current) =>
+            current.map((r) =>
+              selectedReportIds.includes(r._id)
+                ? { ...r, status: "escalated", adminNote: reason || "" }
+                : r
+            )
+          );
+          setSelectedReportIds([]);
+          await loadStats();
+        } catch (err) {
+          setError(
+            err.response?.data?.message || "Unable to bulk escalate reports."
+          );
+        } finally {
+          setConfirmDialog(null);
+        }
+      }
+    });
+  };
+
+  const togglePostSelection = (id) => {
+    setSelectedPostIds((current) =>
+      current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+    );
+  };
+
+  const toggleAllPosts = () => {
+    if (selectedPostIds.length === filteredPosts.length) {
+      setSelectedPostIds([]);
+    } else {
+      setSelectedPostIds(filteredPosts.map((p) => p._id));
+    }
+  };
+
+  const toggleReportSelection = (id) => {
+    setSelectedReportIds((current) =>
+      current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+    );
+  };
+
+  const toggleAllReports = () => {
+    const pending = filteredReports.filter((r) => r.status === "pending");
+    if (
+      selectedReportIds.length === pending.length &&
+      pending.length > 0
+    ) {
+      setSelectedReportIds([]);
+    } else {
+      setSelectedReportIds(pending.map((r) => r._id));
     }
   };
 
@@ -178,21 +492,50 @@ function AdminEmergencyDashboard() {
   }, [posts, postSearch]);
 
   const filteredReports = useMemo(() => {
+    let list = reports;
+
+    if (reportTypeFilter === "posts") {
+      list = list.filter((r) => r.targetType === "post" || !r.targetType);
+    } else if (reportTypeFilter === "users") {
+      list = list.filter((r) => r.targetType === "user");
+    } else if (reportTypeFilter === "messages") {
+      list = list.filter((r) => r.targetType === "message");
+    }
+
+    if (reportStatusFilter !== "all") {
+      list = list.filter((r) => r.status === reportStatusFilter);
+    }
+
+    if (reportReasonFilter !== "all") {
+      list = list.filter((r) => r.reason === reportReasonFilter);
+    }
+
     const q = reportSearch.trim().toLowerCase();
-    if (!q) return reports;
-    return reports.filter((report) => {
-      const postTitle = (report.post?.title || "").toLowerCase();
-      const postOwner = (report.post?.owner?.name || "").toLowerCase();
+    if (!q) return list;
+
+    return list.filter((report) => {
+      const isUser = report.targetType === "user";
+      const isMessage = report.targetType === "message";
+      const targetLabel = isUser
+        ? (report.targetUser?.name || "").toLowerCase()
+        : isMessage
+          ? (report.message?.content || "").toLowerCase()
+          : (report.post?.title || "").toLowerCase();
+      const owner = isUser
+        ? (report.targetUser?.email || "").toLowerCase()
+        : (report.post?.owner?.name || "").toLowerCase();
       const reporter = (report.reporter?.name || "").toLowerCase();
       const reason = (report.reason || "").toLowerCase();
       return (
-        postTitle.includes(q) ||
-        postOwner.includes(q) ||
+        targetLabel.includes(q) ||
+        owner.includes(q) ||
         reporter.includes(q) ||
         reason.includes(q)
       );
     });
-  }, [reports, reportSearch]);
+  }, [reports, reportSearch, reportTypeFilter, reportStatusFilter, reportReasonFilter]);
+
+  const pendingReports = filteredReports.filter((r) => r.status === "pending");
 
   if (accessGranted === null) {
     return (
@@ -219,8 +562,6 @@ function AdminEmergencyDashboard() {
     );
   }
 
-  const pendingCount = reports.filter((r) => r.status === "pending").length;
-
   return (
     <main className="page-container emergency-page">
       <div className="emergency-header">
@@ -246,34 +587,73 @@ function AdminEmergencyDashboard() {
 
       {error && <p className="alert" style={{ marginBottom: 16 }}>{error}</p>}
 
-      <section className="admin-summary">
-        <div>
-          <span>Total community posts</span>
-          <strong>{posts.length}</strong>
-        </div>
+      {stats && (
+        <section className="dashboard-stats dashboard-stats-extended">
+          <div className="stat-card">
+            <span className="stat-icon" aria-hidden="true"><FaFlag /></span>
+            <span className="stat-label">Total reports</span>
+            <strong className="stat-value">{stats.totalReports}</strong>
+          </div>
+          <div className="stat-card">
+            <span className="stat-icon" aria-hidden="true"><FaShieldAlt /></span>
+            <span className="stat-label">Pending</span>
+            <strong className={`stat-value ${stats.pendingReports > 0 ? "stat-value-alert" : ""}`}>
+              {stats.pendingReports}
+            </strong>
+          </div>
+          <div className="stat-card">
+            <span className="stat-icon" aria-hidden="true"><FaCheck /></span>
+            <span className="stat-label">Resolved (7d)</span>
+            <strong className="stat-value">{stats.resolvedThisWeek}</strong>
+          </div>
+          <div className="stat-card">
+            <span className="stat-icon" aria-hidden="true"><FaTrash /></span>
+            <span className="stat-label">Deleted posts (7d)</span>
+            <strong className="stat-value">{stats.deletedPostsThisWeek}</strong>
+          </div>
+        </section>
+      )}
 
-        <div>
-          <span>Pending reports</span>
-          <strong className={pendingCount > 0 ? "emergency-pending-alert" : ""}>
-            {pendingCount}
-          </strong>
-        </div>
-      </section>
+      {stats && stats.reportsByReason && stats.reportsByReason.length > 0 && (
+        <section className="dashboard-chart-card" style={{ marginBottom: 24 }}>
+          <h3 className="dashboard-chart-title">
+            <FaChartBar aria-hidden="true" /> Reports by reason
+          </h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart
+              data={stats.reportsByReason}
+              margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="emergencyBarGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ef4444" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#dc2626" stopOpacity={0.75} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f8" vertical={false} />
+              <XAxis dataKey="reason" tick={{ fontSize: 11, fill: "#66708a" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#66708a" }} allowDecimals={false} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 12 }} />
+              <Bar dataKey="count" fill="url(#emergencyBarGradient)" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </section>
+      )}
 
       <div className="admin-tabs">
+        <button
+          type="button"
+          className={`admin-tab ${activeTab === "reports" ? "active" : ""}`}
+          onClick={() => setActiveTab("reports")}
+        >
+          Reports {stats?.pendingReports > 0 && <span className="admin-tab-badge">{stats.pendingReports}</span>}
+        </button>
         <button
           type="button"
           className={`admin-tab ${activeTab === "posts" ? "active" : ""}`}
           onClick={() => setActiveTab("posts")}
         >
           Post moderation
-        </button>
-        <button
-          type="button"
-          className={`admin-tab ${activeTab === "reports" ? "active" : ""}`}
-          onClick={() => setActiveTab("reports")}
-        >
-          Reports {pendingCount > 0 && <span className="admin-tab-badge">{pendingCount}</span>}
         </button>
       </div>
 
@@ -298,6 +678,36 @@ function AdminEmergencyDashboard() {
             </span>
           </div>
 
+          {filteredPosts.length > 0 && (
+            <div className="bulk-actions-bar">
+              <label className="bulk-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={
+                    selectedPostIds.length === filteredPosts.length &&
+                    filteredPosts.length > 0
+                  }
+                  onChange={toggleAllPosts}
+                />
+                <span>Select all</span>
+              </label>
+              {selectedPostIds.length > 0 && (
+                <>
+                  <span className="bulk-selected-count">
+                    {selectedPostIds.length} selected
+                  </span>
+                  <button
+                    className="button-danger"
+                    type="button"
+                    onClick={handleBulkDeletePosts}
+                  >
+                    <FaTrash /> Delete selected
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           {posts.length === 0 ? (
             <div className="empty-state">
               <p>No posts are available for moderation.</p>
@@ -310,29 +720,27 @@ function AdminEmergencyDashboard() {
             <div className="admin-post-list">
               {filteredPosts.map((post) => (
                 <article className="admin-post-row" key={post._id}>
+                  <input
+                    type="checkbox"
+                    checked={selectedPostIds.includes(post._id)}
+                    onChange={() => togglePostSelection(post._id)}
+                    className="bulk-checkbox"
+                  />
                   <div>
                     <div className="tag-row">
                       <span
-                        className={`tag ${
-                          post.postType === "offer"
-                            ? "tag-offer"
-                            : "tag-request"
-                        }`}
+                        className={`tag ${post.postType === "offer" ? "tag-offer" : "tag-request"}`}
                       >
                         {post.postType}
                       </span>
-
                       <span className="tag tag-neutral">{post.category}</span>
                     </div>
-
                     <h3>{post.title}</h3>
-
                     <p>
                       By {post.owner?.name || "Unknown member"} ·{" "}
                       {post.proficiencyLevel}
                     </p>
                   </div>
-
                   <div className="admin-post-actions">
                     <Link className="button-secondary" to={`/posts/${post._id}`}>
                       View details
@@ -340,7 +748,7 @@ function AdminEmergencyDashboard() {
                     <button
                       className="button-danger"
                       type="button"
-                      onClick={() => handleDelete(post._id, post.title)}
+                      onClick={() => handleDeletePost(post._id, post.title)}
                       disabled={deletingId === post._id}
                     >
                       {deletingId === post._id ? "Deleting..." : "Delete"}
@@ -359,20 +767,119 @@ function AdminEmergencyDashboard() {
             <FaSearch className="admin-search-icon" aria-hidden="true" />
             <input
               type="text"
-              placeholder="Search reports by post, owner, reporter, or reason"
+              placeholder="Search reports by target, reporter, or reason"
               value={reportSearch}
               onChange={(e) => setReportSearch(e.target.value)}
             />
           </div>
 
+          <div className="report-type-tabs">
+            <button
+              type="button"
+              className={`report-type-tab ${reportTypeFilter === "all" ? "active" : ""}`}
+              onClick={() => setReportTypeFilter("all")}
+            >
+              All ({reports.length})
+            </button>
+            <button
+              type="button"
+              className={`report-type-tab ${reportTypeFilter === "posts" ? "active" : ""}`}
+              onClick={() => setReportTypeFilter("posts")}
+            >
+              <FaFileAlt /> Posts
+            </button>
+            <button
+              type="button"
+              className={`report-type-tab ${reportTypeFilter === "users" ? "active" : ""}`}
+              onClick={() => setReportTypeFilter("users")}
+            >
+              <FaUser /> Users
+            </button>
+            <button
+              type="button"
+              className={`report-type-tab ${reportTypeFilter === "messages" ? "active" : ""}`}
+              onClick={() => setReportTypeFilter("messages")}
+            >
+              <FaFlag /> Messages
+            </button>
+          </div>
+
+          <div className="admin-filters-row">
+            <select
+              className="admin-select"
+              value={reportStatusFilter}
+              onChange={(e) => setReportStatusFilter(e.target.value)}
+            >
+              <option value="all">All status</option>
+              <option value="pending">Pending</option>
+              <option value="resolved">Resolved</option>
+              <option value="dismissed">Dismissed</option>
+              <option value="escalated">Escalated</option>
+            </select>
+            <select
+              className="admin-select"
+              value={reportReasonFilter}
+              onChange={(e) => setReportReasonFilter(e.target.value)}
+            >
+              <option value="all">All reasons</option>
+              <option value="spam">Spam</option>
+              <option value="inappropriate">Inappropriate</option>
+              <option value="harassment">Harassment</option>
+              <option value="misinformation">Misinformation</option>
+              <option value="fake_account">Fake account</option>
+              <option value="underage">Underage</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
           <div className="admin-section-title">
             <h2>Reported content (Emergency)</h2>
             <span>
-              {reportSearch.trim()
+              {reportSearch.trim() ||
+              reportTypeFilter !== "all" ||
+              reportStatusFilter !== "all" ||
+              reportReasonFilter !== "all"
                 ? `${filteredReports.length} of ${reports.length}`
                 : `${reports.length} reports`}
             </span>
           </div>
+
+          {pendingReports.length > 0 && (
+            <div className="bulk-actions-bar">
+              <label className="bulk-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={
+                    selectedReportIds.length === pendingReports.length &&
+                    pendingReports.length > 0
+                  }
+                  onChange={toggleAllReports}
+                />
+                <span>Select all pending ({pendingReports.length})</span>
+              </label>
+              {selectedReportIds.length > 0 && (
+                <>
+                  <span className="bulk-selected-count">
+                    {selectedReportIds.length} selected
+                  </span>
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    onClick={handleBulkDismissReports}
+                  >
+                    <FaCheck /> Dismiss all
+                  </button>
+                  <button
+                    className="button-danger"
+                    type="button"
+                    onClick={handleBulkEscalateReports}
+                  >
+                    <FaShieldAlt /> Escalate all
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           {reports.length === 0 ? (
             <div className="empty-state">
@@ -380,71 +887,213 @@ function AdminEmergencyDashboard() {
             </div>
           ) : filteredReports.length === 0 ? (
             <div className="empty-state">
-              <p>No reports match your search.</p>
+              <p>No reports match your filter.</p>
             </div>
           ) : (
             <div className="admin-post-list">
               {filteredReports.map((report) => {
                 const isPending = report.status === "pending";
+                const isUserReport = report.targetType === "user";
+                const isMessageReport = report.targetType === "message";
+
                 return (
                   <article className="admin-report-row" key={report._id}>
+                    {isPending && (
+                      <input
+                        type="checkbox"
+                        checked={selectedReportIds.includes(report._id)}
+                        onChange={() => toggleReportSelection(report._id)}
+                        className="bulk-checkbox"
+                      />
+                    )}
                     <div className="admin-report-info">
                       <div className="tag-row">
-                        <span className={`report-status report-status-${report.status}`}>
+                        <span
+                          className={`report-status report-status-${report.status}`}
+                        >
                           {report.status}
                         </span>
                         <span className="tag tag-danger">{report.reason}</span>
+                        {isUserReport && (
+                          <span className="tag tag-user-report">
+                            <FaUser /> User
+                          </span>
+                        )}
+                        {isMessageReport && (
+                          <span className="tag tag-message-report">
+                            <FaFlag /> Message
+                          </span>
+                        )}
+                        {!isUserReport && !isMessageReport && (
+                          <span className="tag tag-post-report">
+                            <FaFileAlt /> Post
+                          </span>
+                        )}
+                        {report.status === "escalated" && (
+                          <span className="tag tag-escalated">
+                            <FaShieldAlt /> Escalated
+                          </span>
+                        )}
                       </div>
 
-                      <h3>{report.post?.title || "Deleted post"}</h3>
+                      {isUserReport && (
+                        <>
+                          <h3>{report.targetUser?.name || "Deleted user"}</h3>
+                          <p>
+                            {report.targetUser?.email || "No email"} · reported by{" "}
+                            {report.reporter?.name || "Unknown"}
+                          </p>
+                        </>
+                      )}
 
-                      <p>
-                        By {report.post?.owner?.name || "Unknown member"} · reported by{" "}
-                        {report.reporter?.name || "Unknown"}
-                      </p>
+                      {isMessageReport && (
+                        <>
+                          <h3>
+                            Message from {report.targetUser?.name || "a user"}
+                          </h3>
+                          <p>
+                            Reported by {report.reporter?.name || "Unknown"}
+                          </p>
+                          {report.message?.content && (
+                            <p className="admin-report-details">
+                              "{report.message.content}"
+                            </p>
+                          )}
+                        </>
+                      )}
+
+                      {!isUserReport && !isMessageReport && (
+                        <>
+                          <h3>{report.post?.title || "Deleted post"}</h3>
+                          <p>
+                            By {report.post?.owner?.name || "Unknown member"} · reported by{" "}
+                            {report.reporter?.name || "Unknown"}
+                          </p>
+                        </>
+                      )}
 
                       {report.details && (
-                        <p className="admin-report-details">
-                          "{report.details}"
-                        </p>
+                        <p className="admin-report-details">"{report.details}"</p>
                       )}
 
                       {report.adminNote && (
                         <p className="admin-report-note">
-                          Admin note: {report.adminNote}
+                          Note: {report.adminNote}
                         </p>
                       )}
                     </div>
 
-                    {report.post?._id && (
-                      <div className="admin-report-actions">
-                        <Link className="button-secondary" to={`/posts/${report.post._id}`}>
+                    <div className="admin-report-actions">
+                      {isUserReport && (
+                        <Link
+                          className="button-secondary"
+                          to={`/profile/${report.targetUser?._id}`}
+                        >
+                          View profile
+                        </Link>
+                      )}
+
+                      {isMessageReport && (
+                        <button
+                          className="button-secondary"
+                          type="button"
+                          onClick={() => setPreviewReport(report)}
+                        >
+                          <FaFlag aria-hidden="true" />
+                          <span>View reported content</span>
+                        </button>
+                      )}
+
+                      {!isUserReport && !isMessageReport && report.post?._id && (
+                        <Link
+                          className="button-secondary"
+                          to={`/posts/${report.post._id}`}
+                        >
                           View details
                         </Link>
-                        {isPending && (
-                          <>
-                            <button
-                              className="button-secondary"
-                              type="button"
-                              onClick={() => handleReportAction(report._id, "dismiss")}
-                              disabled={reportActionId === report._id}
-                            >
-                              <FaCheck aria-hidden="true" />
-                              <span>Dismiss</span>
-                            </button>
+                      )}
+
+                      {isPending && (
+                        <>
+                          <button
+                            className="button-secondary"
+                            type="button"
+                            onClick={() =>
+                              handleReportAction(report._id, "dismiss")
+                            }
+                            disabled={reportActionId === report._id}
+                          >
+                            <FaCheck aria-hidden="true" />
+                            <span>Dismiss</span>
+                          </button>
+                          {isUserReport && (
+                            <>
+                              <button
+                                className="button"
+                                type="button"
+                                onClick={() =>
+                                  handleReportAction(report._id, "resolve_user")
+                                }
+                                disabled={reportActionId === report._id}
+                              >
+                                <FaFlag aria-hidden="true" />
+                                <span>Warn</span>
+                              </button>
+                              <button
+                                className="button-danger"
+                                type="button"
+                                onClick={() =>
+                                  handleReportAction(report._id, "escalate")
+                                }
+                                disabled={reportActionId === report._id}
+                              >
+                                <FaShieldAlt aria-hidden="true" />
+                                <span>Escalate</span>
+                              </button>
+                            </>
+                          )}
+                          {isMessageReport && (
+                            <>
+                              <button
+                                className="button-danger"
+                                type="button"
+                                onClick={() =>
+                                  handleReportAction(report._id, "delete_message")
+                                }
+                                disabled={reportActionId === report._id}
+                              >
+                                <FaTrash aria-hidden="true" />
+                                <span>Delete message</span>
+                              </button>
+                              <button
+                                className="button"
+                                type="button"
+                                onClick={() =>
+                                  handleReportAction(report._id, "escalate")
+                                }
+                                disabled={reportActionId === report._id}
+                              >
+                                <FaShieldAlt aria-hidden="true" />
+                                <span>Escalate</span>
+                              </button>
+                            </>
+                          )}
+                          {!isUserReport && !isMessageReport && (
                             <button
                               className="button-danger"
                               type="button"
-                              onClick={() => handleReportAction(report._id, "delete")}
+                              onClick={() =>
+                                handleReportAction(report._id, "delete")
+                              }
                               disabled={reportActionId === report._id}
                             >
                               <FaTrash aria-hidden="true" />
                               <span>Delete post</span>
                             </button>
-                          </>
-                        )}
-                      </div>
-                    )}
+                          )}
+                        </>
+                      )}
+                    </div>
                   </article>
                 );
               })}
@@ -460,8 +1109,17 @@ function AdminEmergencyDashboard() {
         confirmLabel={confirmDialog?.confirmLabel || "Confirm"}
         cancelLabel={confirmDialog?.cancelLabel || "Cancel"}
         tone={confirmDialog?.tone || "danger"}
+        inputLabel={confirmDialog?.inputLabel}
+        inputPlaceholder={confirmDialog?.inputPlaceholder}
+        inputRequired={confirmDialog?.inputRequired}
+        inputMinLength={confirmDialog?.inputMinLength}
         onConfirm={confirmDialog?.onConfirm || (() => {})}
         onCancel={() => setConfirmDialog(null)}
+      />
+
+      <ReportedMessageModal
+        report={previewReport}
+        onClose={() => setPreviewReport(null)}
       />
     </main>
   );

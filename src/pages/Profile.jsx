@@ -193,14 +193,18 @@ function Profile() {
   const canReport = !isOwnProfile && user.role !== "super_admin" && myRole === "member";
 
   return (
-    <main className="page-container profile-page">
-      <section className="profile-header-card">
-        <div className="profile-header-top">
-          <div className="profile-avatar" style={{ background: getAvatarColor(user.name) }}>
+    <main className="page-container profile2-page">
+      <section className="profile2-hero">
+        <div className="profile2-hero-banner" />
+        <div className="profile2-hero-content">
+          <div
+            className="profile2-hero-avatar"
+            style={{ background: getAvatarColor(user.name) }}
+          >
             {getInitials(user.name)}
           </div>
-          <div className="profile-header-info">
-            <div className="profile-name-row">
+          <div className="profile2-hero-info">
+            <div className="profile2-name-row">
               <h1>{user.name}</h1>
               <span className={`role-badge role-${user.role}`}>
                 {user.role === "member" ? <FaUser /> : <FaUserShield />}
@@ -212,27 +216,27 @@ function Profile() {
                 </span>
               )}
             </div>
-            <div className="profile-meta">
+            <div className="profile2-meta">
               {memberSince && (
-                <span className="profile-meta-item">
+                <span className="profile2-meta-item">
                   <FaCalendarAlt aria-hidden="true" />
                   <span>Member since {memberSince}</span>
                 </span>
               )}
               {reviewsData.total > 0 && (
-                <span className="profile-meta-item">
+                <span className="profile2-meta-item">
                   <FaStar style={{ color: "#f59e0b" }} aria-hidden="true" />
                   <span>{reviewsData.average} ({reviewsData.total} review{reviewsData.total > 1 ? "s" : ""})</span>
                 </span>
               )}
             </div>
             {user.isSuspended && user.suspendedReason && (
-              <p className="profile-suspended-note">
+              <p className="profile2-suspended-note">
                 Reason: {user.suspendedReason}
               </p>
             )}
           </div>
-          <div className="profile-header-actions">
+          <div className="profile2-hero-actions">
             {isOwnProfile ? (
               <Link className="button-secondary" to="/profile/edit">
                 <FaEdit aria-hidden="true" />
@@ -280,24 +284,24 @@ function Profile() {
         </div>
       </section>
 
-      <div className="profile-tabs">
+      <div className="profile2-tabs">
         <button
           type="button"
-          className={`profile-tab ${activeTab === "posts" ? "active" : ""}`}
+          className={`profile2-tab ${activeTab === "posts" ? "active" : ""}`}
           onClick={() => setActiveTab("posts")}
         >
-          Posts <span className="profile-tab-count">{totalPosts}</span>
+          Posts <span className="profile2-tab-count">{totalPosts}</span>
         </button>
         <button
           type="button"
-          className={`profile-tab ${activeTab === "reviews" ? "active" : ""}`}
+          className={`profile2-tab ${activeTab === "reviews" ? "active" : ""}`}
           onClick={() => setActiveTab("reviews")}
         >
-          Reviews <span className="profile-tab-count">{reviewsData.total}</span>
+          Reviews <span className="profile2-tab-count">{reviewsData.total}</span>
         </button>
         <button
           type="button"
-          className={`profile-tab ${activeTab === "about" ? "active" : ""}`}
+          className={`profile2-tab ${activeTab === "about" ? "active" : ""}`}
           onClick={() => setActiveTab("about")}
         >
           About
@@ -312,21 +316,52 @@ function Profile() {
               <p>{isOwnProfile ? "Share your first skill to get started." : "This member has not shared any skills yet."}</p>
             </div>
           ) : (
-            <div className="profile-post-feed">
+            <div className="profile2-post-feed">
               {safePosts.map((post) => {
                 const ownerName = user.name;
+                const hasImage = post.images && post.images.length > 0;
                 return (
-                  <Link className="post-card" key={post._id} to={`/posts/${post._id}`}>
-                    <div className="post-card-header">
-                      <span className="post-avatar" style={{ background: getAvatarColor(ownerName) }} aria-hidden="true">
+                  <Link className="profile2-feed-card" key={post._id} to={`/posts/${post._id}`}>
+                    <div className="profile2-feed-header">
+                      <span
+                        className="profile2-avatar"
+                        style={{ background: getAvatarColor(ownerName) }}
+                        aria-hidden="true"
+                      >
                         {getInitials(ownerName)}
                       </span>
-                      <span className={`tag ${post.postType === "offer" ? "tag-offer" : "tag-request"}`}>{post.postType}</span>
+                      <div className="profile2-feed-header-info">
+                        <span className="profile2-feed-owner">{ownerName}</span>
+                        <span className="profile2-feed-meta">
+                          {post.category} · {post.proficiencyLevel}
+                        </span>
+                      </div>
+                      <span className={`profile2-pill ${post.postType === "offer" ? "profile2-pill-offer" : "profile2-pill-request"}`}>
+                        {post.postType}
+                      </span>
                     </div>
-                    <h2>{post.title}</h2>
-                    <p className="post-description">{post.description}</p>
-                    <p className="post-meta">{post.category} · {post.proficiencyLevel}</p>
-                    <span className="post-card-link">View details →</span>
+
+                    <div className="profile2-feed-body">
+                      <h2 className="profile2-feed-title">{post.title}</h2>
+                      {post.description && (
+                        <p className="profile2-feed-desc">{post.description}</p>
+                      )}
+                    </div>
+
+                    {hasImage && (
+                      <div className="profile2-feed-image">
+                        <img src={post.images[0]} alt={post.title} />
+                        {post.images.length > 1 && (
+                          <span className="profile2-feed-image-count">
+                            +{post.images.length - 1} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="profile2-feed-footer">
+                      <span className="profile2-feed-view">View details →</span>
+                    </div>
                   </Link>
                 );
               })}
@@ -336,9 +371,9 @@ function Profile() {
       )}
 
       {activeTab === "reviews" && (
-        <section className="profile-reviews" aria-label="Reviews">
+        <section className="profile2-reviews" aria-label="Reviews">
           {!isOwnProfile && (
-            <div className="reviews-action-bar">
+            <div className="profile2-reviews-action">
               <button
                 type="button"
                 className={myReview ? "button-secondary" : "button"}
@@ -362,33 +397,59 @@ function Profile() {
             </div>
           ) : (
             <>
-              <div className="reviews-summary">
-                <div className="reviews-summary-score">
+              <div className="profile2-reviews-summary">
+                <div className="profile2-reviews-score">
                   <strong>{reviewsData.average}</strong>
-                  <StarRating value={Math.round(reviewsData.average)} size="sm" readOnly />
-                  <span>{reviewsData.total} review{reviewsData.total > 1 ? "s" : ""}</span>
+                  <StarRating value={Math.round(reviewsData.average)} size="md" readOnly />
+                </div>
+                <div className="profile2-reviews-summary-meta">
+                  <span className="profile2-reviews-total">
+                    Based on {reviewsData.total} review{reviewsData.total > 1 ? "s" : ""}
+                  </span>
+                  <span className="profile2-reviews-hint">Community feedback from skill exchanges</span>
                 </div>
               </div>
 
-              <div className="review-list">
+              <div className="profile2-review-list">
                 {reviewsData.reviews.map((review) => (
-                  <article className="review-item" key={review._id}>
-                    <div className="review-item-header">
+                  <article className="profile2-review-item" key={review._id}>
+                    <div className="profile2-review-header">
                       <span
-                        className="review-item-avatar"
+                        className="profile2-review-avatar"
                         style={{ background: getAvatarColor(review.reviewer?.name || "?") }}
                         aria-hidden="true"
                       >
                         {getInitials(review.reviewer?.name || "?")}
                       </span>
-                      <div className="review-item-info">
+                      <div className="profile2-review-info">
                         <strong>{review.reviewer?.name || "Anonymous"}</strong>
-                        <span className="review-item-date">{formatDate(review.createdAt)}</span>
+                        <span className="profile2-review-date">{formatDate(review.createdAt)}</span>
                       </div>
                       <StarRating value={review.rating} size="sm" readOnly />
                     </div>
+
+                    {review.nlpSentiment && (
+                      <div style={{ marginBottom: '10px' }}>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          padding: '3px 9px',
+                          borderRadius: '99px',
+                          background: 
+                            review.nlpSentiment === 'positive' ? '#dcfce7' : 
+                            review.nlpSentiment === 'negative' ? '#fee2e2' : '#f3f4f6',
+                          color: 
+                            review.nlpSentiment === 'positive' ? '#166534' : 
+                            review.nlpSentiment === 'negative' ? '#991b1b' : '#4b5563',
+                        }}>
+                          {review.nlpSentiment === 'positive' ? '😊 Positive' : 
+                           review.nlpSentiment === 'negative' ? '😠 Negative' : '😐 Neutral'}
+                        </span>
+                      </div>
+                    )}
+
                     {review.comment && (
-                      <p className="review-item-comment">{review.comment}</p>
+                      <p className="profile2-review-comment">{review.comment}</p>
                     )}
                   </article>
                 ))}
@@ -399,84 +460,84 @@ function Profile() {
       )}
 
       {activeTab === "about" && (
-        <section className="profile-about" aria-label="About">
-          <div className="about-section">
-            <h3 className="about-section-title">Bio</h3>
+        <section className="profile2-about" aria-label="About">
+          <div className="profile2-about-section">
+            <h3 className="profile2-about-title">Bio</h3>
             {user.bio ? (
-              <p className="about-bio">{user.bio}</p>
+              <p className="profile2-about-bio">{user.bio}</p>
             ) : (
-              <p className="about-empty">This member has not added a bio yet.</p>
+              <p className="profile2-about-empty">This member has not added a bio yet.</p>
             )}
           </div>
 
-          <div className="about-section">
-            <h3 className="about-section-title">
+          <div className="profile2-about-section">
+            <h3 className="profile2-about-title">
               <FaBullseye aria-hidden="true" /> Interests
             </h3>
             {hasInterests ? (
-              <div className="about-tags">
+              <div className="profile2-about-tags">
                 {user.interests.map((item, i) => (
-                  <span className="about-tag" key={i}>{item}</span>
+                  <span className="profile2-about-tag" key={i}>{item}</span>
                 ))}
               </div>
             ) : (
-              <p className="about-empty">No interests listed.</p>
+              <p className="profile2-about-empty">No interests listed.</p>
             )}
           </div>
 
-          <div className="about-section">
-            <h3 className="about-section-title">
+          <div className="profile2-about-section">
+            <h3 className="profile2-about-title">
               <FaPalette aria-hidden="true" /> Hobbies
             </h3>
             {hasHobbies ? (
-              <div className="about-tags">
+              <div className="profile2-about-tags">
                 {user.hobbies.map((item, i) => (
-                  <span className="about-tag" key={i}>{item}</span>
+                  <span className="profile2-about-tag" key={i}>{item}</span>
                 ))}
               </div>
             ) : (
-              <p className="about-empty">No hobbies listed.</p>
+              <p className="profile2-about-empty">No hobbies listed.</p>
             )}
           </div>
 
-          <div className="about-section">
-            <h3 className="about-section-title">
+          <div className="profile2-about-section">
+            <h3 className="profile2-about-title">
               <FaClock aria-hidden="true" /> Availability
             </h3>
             {user.availability ? (
-              <p className="about-bio">{user.availability}</p>
+              <p className="profile2-about-bio">{user.availability}</p>
             ) : (
-              <p className="about-empty">Not specified.</p>
+              <p className="profile2-about-empty">Not specified.</p>
             )}
           </div>
 
-          <div className="about-section">
-            <h3 className="about-section-title">
+          <div className="profile2-about-section">
+            <h3 className="profile2-about-title">
               <FaGraduationCap aria-hidden="true" /> Preferred learning style
             </h3>
             {user.preferredLearningStyle ? (
-              <p className="about-bio" style={{ textTransform: "capitalize" }}>
+              <p className="profile2-about-bio" style={{ textTransform: "capitalize" }}>
                 {user.preferredLearningStyle}
               </p>
             ) : (
-              <p className="about-empty">Not specified.</p>
+              <p className="profile2-about-empty">Not specified.</p>
             )}
           </div>
 
-          <div className="about-section">
-            <h3 className="about-section-title">Activity</h3>
-            <div className="about-stats">
-              <div className="about-stat">
-                <span className="about-stat-value">{totalPosts}</span>
-                <span className="about-stat-label">Total posts</span>
+          <div className="profile2-about-section">
+            <h3 className="profile2-about-title">Activity</h3>
+            <div className="profile2-about-stats">
+              <div className="profile2-about-stat">
+                <span className="profile2-about-stat-value">{totalPosts}</span>
+                <span className="profile2-about-stat-label">Total posts</span>
               </div>
-              <div className="about-stat">
-                <span className="about-stat-value">{offerCount}</span>
-                <span className="about-stat-label">Offers</span>
+              <div className="profile2-about-stat">
+                <span className="profile2-about-stat-value">{offerCount}</span>
+                <span className="profile2-about-stat-label">Offers</span>
               </div>
-              <div className="about-stat">
-                <span className="about-stat-value">{requestCount}</span>
-                <span className="about-stat-label">Requests</span>
+              <div className="profile2-about-stat">
+                <span className="profile2-about-stat-value">{requestCount}</span>
+                <span className="profile2-about-stat-label">Requests</span>
               </div>
             </div>
           </div>

@@ -10,7 +10,8 @@ import {
   FaExclamationTriangle,
   FaTimesCircle,
   FaQuestionCircle,
-  FaClock
+  FaClock,
+  FaBug
 } from "react-icons/fa";
 import { getSystemHealth } from "../api";
 
@@ -44,6 +45,18 @@ function formatCheckedAt(iso) {
   if (!iso) return "";
   const d = new Date(iso);
   return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+}
+
+function formatErrorTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMin = Math.floor((now - d) / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}h ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function SystemHealthTab() {
@@ -222,6 +235,89 @@ function SystemHealthTab() {
               );
             })}
           </div>
+
+          {health.errors && (
+            <div
+              className="system-health-card"
+              style={{
+                background: "#fff",
+                border: "1px solid #e5e7eb",
+                borderRadius: 10,
+                padding: "16px 18px",
+                marginTop: 16
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: 12
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    background: health.errors.total > 0 ? "#dc262615" : "#16856515",
+                    color: health.errors.total > 0 ? "#dc2626" : "#168565"
+                  }}
+                >
+                  <FaBug />
+                </span>
+                <div>
+                  <strong style={{ display: "block" }}>Errors ({health.errors.windowHours}h)</strong>
+                  <span style={{ fontSize: 13, color: "#66708a" }}>
+                    {health.errors.total === 0
+                      ? "No errors recorded"
+                      : `${health.errors.total} error${health.errors.total === 1 ? "" : "s"} · last ${formatErrorTime(health.errors.lastError)}`}
+                  </span>
+                </div>
+              </div>
+
+              {health.errors.total > 0 && health.errors.topRoutes.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {health.errors.topRoutes.map((r) => (
+                    <div
+                      key={r.route}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 13
+                      }}
+                    >
+                      <code
+                        style={{
+                          fontFamily: "monospace",
+                          background: "#f6f7ff",
+                          padding: "2px 6px",
+                          borderRadius: 4,
+                          color: "#374151",
+                          fontSize: 12
+                        }}
+                      >
+                        {r.route}
+                      </code>
+                      <span
+                        style={{
+                          marginLeft: "auto",
+                          color: "#dc2626",
+                          fontWeight: 600
+                        }}
+                      >
+                        {r.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div
             className="system-health-runtime"

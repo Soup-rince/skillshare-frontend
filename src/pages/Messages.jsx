@@ -579,15 +579,7 @@ function Messages() {
   };
 
   return (
-    <main className="page-container">
-      <header className="page-heading">
-        <div>
-          <p className="eyebrow">Connect</p>
-          <h1>Messages</h1>
-          <p>Start a conversation about a skill exchange.</p>
-        </div>
-      </header>
-      {error && <p className="alert" style={{ marginBottom: 16 }}>{error}</p>}
+    <main className="page-container msg-v2-page">
       <section className="messages-layout">
         <aside className="conversation-list">
           <div className="conversation-list-header">
@@ -622,24 +614,17 @@ function Messages() {
                 }
               }}
             >
-              <Link
-                to={`/profile/${conv.partnerId}`}
+              <span
                 className="conversation-avatar"
                 style={{ background: getAvatarColor(conv.partnerName) }}
-                aria-label={`View ${conv.partnerName}'s profile`}
-                onClick={(e) => e.stopPropagation()}
               >
                 {getInitials(conv.partnerName)}
-              </Link>
+              </span>
               <span className="conversation-body">
                 <span className="conversation-top">
-                  <Link
-                    to={`/profile/${conv.partnerId}`}
-                    className="conversation-name-link"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <span className="conversation-name-link">
                     {conv.partnerName}
-                  </Link>
+                  </span>
                   {conv.unreadCount > 0 && (
                     <span className="conversation-badge">
                       {conv.unreadCount > 99 ? "99+" : conv.unreadCount}

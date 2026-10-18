@@ -5,6 +5,33 @@ import { getPostById, deletePost, createReport } from "../api";
 import ReportForm from "../components/ReportForm";
 import { useConfirm } from "../contexts/ConfirmContext";
 
+function getInitials(name) {
+  if (!name) return "?";
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function getAvatarColor(name) {
+  const palette = ["#2639ba", "#087b75", "#7c3aed", "#c2410c", "#be123c", "#0369a1"];
+  if (!name) return palette[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return palette[Math.abs(hash) % palette.length];
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 function PostDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -91,84 +118,158 @@ function PostDetail() {
 
   const isOwner = post.owner?._id === myId;
   const canModerateDelete = canModerate && !isOwner;
+  const ownerName = post.owner?.name || "SkillShare member";
+  const hasImages = post.images && post.images.length > 0;
 
   return (
-    <main className="page-container detail-layout">
-      <article className="content-card">
-        <div className="detail-meta">Posted by <Link to={`/profile/${post.owner?._id}`}>{post.owner?.name || "SkillShare member"}</Link><span>·</span><span>{new Date(post.createdAt).toLocaleDateString()}</span></div>
-        <div className="tag-row"><span className={`tag ${post.postType === "offer" ? "tag-offer" : "tag-request"}`}>{post.postType}</span><span className="tag tag-neutral">{post.category}</span><span className="tag tag-neutral">{post.proficiencyLevel}</span></div>
-        <h1 className="detail-title">{post.title}</h1>
-        <p className="detail-copy">{post.description}</p>
+    <main className="page-container detail2-page">
+      <Link className="detail2-back" to="/browse">
+        ← Back to browse
+      </Link>
 
-        {post.images && post.images.length > 0 && (
-          <div className="detail-images">
-            {post.images.map((url, i) => (
+      <div className="detail2-grid">
+        <article className="detail2-main">
+          {hasImages && (
+            <div className="detail2-hero">
               <img
-                key={i}
-                src={url}
-                alt={`Post image ${i + 1}`}
-                className="detail-image"
+                src={post.images[0]}
+                alt={post.title}
                 onClick={() => {
-                  setLightboxUrl(url);
-                  setLightboxName(`Post image ${i + 1}`);
+                  setLightboxUrl(post.images[0]);
+                  setLightboxName("Post image 1");
                 }}
               />
-            ))}
-          </div>
-        )}
+            </div>
+          )}
 
-        {actionError && (
-          <p className="alert" style={{ marginTop: 24 }}>
-            {actionError}
-          </p>
-        )}
+          <div className="detail2-content">
+            <div className="detail2-tags">
+              <span className={`detail2-pill ${post.postType === "offer" ? "detail2-pill-offer" : "detail2-pill-request"}`}>
+                {post.postType}
+              </span>
+              <span className="detail2-pill detail2-pill-neutral">
+                {post.category}
+              </span>
+              <span className="detail2-pill detail2-pill-neutral">
+                {post.proficiencyLevel}
+              </span>
+            </div>
 
-        {isOwner ? (
-          <div className="form-actions" style={{ justifyContent: "flex-start" }}>
-            <Link className="button-secondary" to={`/posts/${post._id}/edit`}>
-              Edit post
-            </Link>
-            <button
-              className="button-danger"
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              {deleting ? "Deleting..." : "Delete post"}
-            </button>
-          </div>
-        ) : (
-          <div className="detail-actions">
-            <button
-              className="button"
-              onClick={() => navigate(`/messages?to=${post.owner._id}`)}
-            >
-              Message {post.owner?.name}
-            </button>
-            {canModerateDelete && (
-              <button
-                className="button-danger"
-                type="button"
-                onClick={handleModeratorDelete}
-                disabled={deleting}
-              >
-                <FaTrash aria-hidden="true" />
-                <span>{deleting ? "Deleting..." : "Delete post (moderator)"}</span>
-              </button>
+            <h1 className="detail2-title">{post.title}</h1>
+            <p className="detail2-description">{post.description}</p>
+
+            {post.aiTags && post.aiTags.length > 0 && (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '16px' }}>
+                {post.aiTags.map((tag, idx) => (
+                  <span key={idx} style={{ background: '#f0f2ff', color: '#2639ba', fontSize: '12px', padding: '4px 10px', borderRadius: '99px', fontWeight: '600' }}>
+                    #{tag}
+                  </span>
+                ))}
+              </div>
             )}
-            {!canModerate && (
-              <button
-                className="report-button"
-                type="button"
-                onClick={() => setShowReportForm(true)}
-              >
-                <FaFlag aria-hidden="true" />
-                <span>Report</span>
-              </button>
+
+            {hasImages && post.images.length > 1 && (
+              <div className="detail2-gallery">
+                {post.images.slice(1).map((url, i) => (
+                  <img
+                    key={i + 1}
+                    src={url}
+                    alt={`Post image ${i + 2}`}
+                    className="detail2-gallery-thumb"
+                    onClick={() => {
+                      setLightboxUrl(url);
+                      setLightboxName(`Post image ${i + 2}`);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {actionError && (
+              <p className="alert" style={{ marginTop: 24 }}>
+                {actionError}
+              </p>
             )}
           </div>
-        )}
-      </article>
+        </article>
+
+        <aside className="detail2-sidebar">
+          <div className="detail2-owner-card">
+            <div className="detail2-owner-header">
+              <Link
+                className="detail2-avatar"
+                to={`/profile/${post.owner?._id}`}
+                style={{ background: getAvatarColor(ownerName) }}
+                aria-label={`View ${ownerName}'s profile`}
+              >
+                {getInitials(ownerName)}
+              </Link>
+              <div className="detail2-owner-info">
+                <Link
+                  className="detail2-owner-name"
+                  to={`/profile/${post.owner?._id}`}
+                >
+                  {ownerName}
+                </Link>
+                <span className="detail2-owner-meta">
+                  Posted {formatDate(post.createdAt)}
+                </span>
+              </div>
+            </div>
+
+            <div className="detail2-owner-actions">
+              {isOwner ? (
+                <>
+                  <Link
+                    className="detail2-btn detail2-btn-secondary"
+                    to={`/posts/${post._id}/edit`}
+                  >
+                    Edit post
+                  </Link>
+                  <button
+                    className="detail2-btn detail2-btn-danger"
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? "Deleting..." : "Delete post"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="detail2-btn detail2-btn-primary"
+                    onClick={() => navigate(`/messages?to=${post.owner._id}`)}
+                  >
+                    Message {ownerName}
+                  </button>
+                  {canModerateDelete && (
+                    <button
+                      className="detail2-btn detail2-btn-danger"
+                      type="button"
+                      onClick={handleModeratorDelete}
+                      disabled={deleting}
+                    >
+                      <FaTrash aria-hidden="true" />
+                      <span>{deleting ? "Deleting..." : "Delete post (moderator)"}</span>
+                    </button>
+                  )}
+                  {!canModerate && (
+                    <button
+                      className="detail2-btn detail2-btn-ghost"
+                      type="button"
+                      onClick={() => setShowReportForm(true)}
+                    >
+                      <FaFlag aria-hidden="true" />
+                      <span>Report</span>
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </aside>
+      </div>
 
       <ReportForm
         isOpen={showReportForm}
