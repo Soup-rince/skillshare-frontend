@@ -75,7 +75,7 @@ function PostDetail() {
     try {
       setDeleting(true);
       setActionError("");
-      await deletePost(id, token);
+      await deletePost(id, {}, token);
       navigate("/dashboard");
     } catch (err) {
       setActionError(
@@ -98,7 +98,7 @@ function PostDetail() {
     try {
       setDeleting(true);
       setActionError("");
-      await deletePost(id, token);
+      await deletePost(id, {}, token);
       navigate("/browse");
     } catch (err) {
       setActionError(
