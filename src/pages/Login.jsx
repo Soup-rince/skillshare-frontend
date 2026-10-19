@@ -37,7 +37,13 @@ function Login() {
     localStorage.setItem("role", data.role);
     localStorage.setItem("userName", data.name);
 
-    if (data.hasSeenWelcome === false) {
+    if (data.role === "super_admin") {
+      navigate("/superadmin");
+    } else if (data.role === "admin") {
+      navigate("/admin");
+    } else if (data.role === "moderator") {
+      navigate("/moderator");
+    } else if (data.hasSeenWelcome === false) {
       navigate("/getting-started");
     } else {
       navigate("/browse");
