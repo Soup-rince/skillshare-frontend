@@ -4,6 +4,7 @@ import { FaFlag, FaTrash, FaTimes, FaDownload } from "react-icons/fa";
 import { getPostById, deletePost, createReport } from "../api";
 import ReportForm from "../components/ReportForm";
 import { useConfirm } from "../contexts/ConfirmContext";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 function getInitials(name) {
   if (!name) return "?";
@@ -48,8 +49,9 @@ function PostDetail() {
 
   const userRole = localStorage.getItem("role");
   const isModerator = userRole === "moderator";
+  const isAdmin = userRole === "admin";
   const isSuperAdmin = userRole === "super_admin";
-  const canModerate = isModerator || isSuperAdmin;
+  const canModerate = isModerator || isAdmin || isSuperAdmin;
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -87,18 +89,22 @@ function PostDetail() {
   };
 
   const handleModeratorDelete = async () => {
-    const shouldDelete = await confirm({
+    const reasonText = await confirm({
       title: "Delete this post?",
       message: `The post "${post?.title || "Untitled"}" will be permanently deleted. This action cannot be undone. The post owner will be notified.`,
       confirmLabel: "Delete post",
       cancelLabel: "Cancel",
       tone: "danger",
+      inputLabel: "Reason for deletion",
+      inputPlaceholder: "e.g. Violation of community guidelines",
+      inputRequired: true,
+      inputMinLength: 5,
     });
-    if (!shouldDelete) return;
+    if (!reasonText) return;
     try {
       setDeleting(true);
       setActionError("");
-      await deletePost(id, {}, token);
+      await deletePost(id, { reason: reasonText }, token);
       navigate("/browse");
     } catch (err) {
       setActionError(

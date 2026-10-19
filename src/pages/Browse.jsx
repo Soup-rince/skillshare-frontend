@@ -58,8 +58,9 @@ function Browse() {
   const token = localStorage.getItem("token");
   const userRole = localStorage.getItem("role");
   const isModerator = userRole === "moderator";
+  const isAdmin = userRole === "admin";
   const isSuperAdmin = userRole === "super_admin";
-  const canDeleteAny = isModerator || isSuperAdmin;
+  const canDeleteAny = isModerator || isAdmin || isSuperAdmin;
 
   const fetchPosts = async () => {
     const params = {};
@@ -97,6 +98,16 @@ function Browse() {
   }, []);
 
   useEffect(() => {
+    const handleRefresh = () => {
+      fetchPosts();
+      fetchMatches();
+      setMembersPage(1);
+    };
+    window.addEventListener("refresh-browse", handleRefresh);
+    return () => window.removeEventListener("refresh-browse", handleRefresh);
+  }, []);
+
+  useEffect(() => {
     if (activeTab !== "members") return;
 
     const timer = window.setTimeout(async () => {
@@ -130,18 +141,23 @@ function Browse() {
     e.preventDefault();
     e.stopPropagation();
 
-    const ok = await confirm({
+    const reasonText = await confirm({
       title: "Delete this post?",
       message: `The post "${post.title || "Untitled"}" will be permanently deleted. The post owner will be notified.`,
       confirmLabel: "Delete post",
       cancelLabel: "Cancel",
       tone: "danger",
+      inputLabel: "Reason for deletion",
+      inputPlaceholder: "e.g. Violation of community guidelines",
+      inputRequired: true,
+      inputMinLength: 5,
     });
-    if (!ok) return;
+
+    if (!reasonText) return;
 
     try {
       setDeletingId(post._id);
-      await deletePost(post._id, token);
+      await deletePost(post._id, { reason: reasonText }, token);
       setPosts((current) => current.filter((p) => p._id !== post._id));
     } catch (err) {
       setError(err.response?.data?.message || "Unable to delete this post.");
@@ -457,6 +473,10 @@ function Browse() {
           )}
         </section>
       )}
+
+      <Link className="browse-fab" to="/create-post" aria-label="Create a new post">
+        <span className="browse-fab-icon">+</span>
+      </Link>
     </main>
   );
 }

@@ -16,12 +16,19 @@ export function ConfirmProvider({ children }) {
         confirmLabel: options.confirmLabel || "Confirm",
         cancelLabel: options.cancelLabel || "Cancel",
         tone: options.tone || "danger",
+        inputLabel: options.inputLabel,
+        inputPlaceholder: options.inputPlaceholder,
+        inputRequired: options.inputRequired || false,
+        inputMinLength: options.inputMinLength || 0,
       });
     });
   }, []);
 
-  const handleConfirm = () => {
-    if (resolverRef.current) resolverRef.current(true);
+  const handleConfirm = (inputValue) => {
+    if (resolverRef.current) {
+      // Kung may input, ibalik yung text. Kung wala, true.
+      resolverRef.current(inputValue !== undefined ? inputValue : true);
+    }
     resolverRef.current = null;
     setDialogState(null);
   };
@@ -42,6 +49,10 @@ export function ConfirmProvider({ children }) {
         confirmLabel={dialogState?.confirmLabel}
         cancelLabel={dialogState?.cancelLabel}
         tone={dialogState?.tone}
+        inputLabel={dialogState?.inputLabel}
+        inputPlaceholder={dialogState?.inputPlaceholder}
+        inputRequired={dialogState?.inputRequired}
+        inputMinLength={dialogState?.inputMinLength}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />

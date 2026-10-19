@@ -10602,3 +10602,89 @@ body:has(.msg-v2-page) {
     width: 100%;
   }
 }
+
+/* Floating Action Button (FAB) */
+.browse-fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #2639ba 0%, #4f5fc4 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(38, 57, 186, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 999;
+}
+
+.browse-fab:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 28px rgba(38, 57, 186, 0.5);
+}
+
+.browse-fab-icon {
+  font-size: 36px;
+  font-weight: 300;
+  line-height: 1;
+  margin-top: -4px; /* Slight adjustment to center the plus sign */
+}
+
+/* Mobile adjustment */
+@media (max-width: 640px) {
+  .browse-fab {
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+  }
+  .browse-fab-icon {
+    font-size: 32px;
+  }
+}
+
+.browse-fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #2639ba 0%, #4f5fc4 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(38, 57, 186, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 9999;
+}
+
+.browse-fab:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 28px rgba(38, 57, 186, 0.5);
+}
+
+.browse-fab-icon {
+  font-size: 36px;
+  font-weight: 300;
+  line-height: 1;
+  margin-top: -4px;
+}
+
+@media (max-width: 640px) {
+  .browse-fab {
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+  }
+  .browse-fab-icon {
+    font-size: 32px;
+  }
+}

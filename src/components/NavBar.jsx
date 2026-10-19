@@ -86,13 +86,31 @@ function NavBar() {
     navigate("/login");
   };
 
+  const handleBrandClick = (e) => {
+    if (location.pathname === "/browse") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.dispatchEvent(new Event("refresh-browse"));
+    }
+  };
+
+  const handleBrowseClick = (e) => {
+    if (location.pathname === "/browse") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.dispatchEvent(new Event("refresh-browse"));
+    }
+  };
+
   if (!token) return null;
 
   return (
     <nav className="site-nav">
-      <Link className="brand" to="/browse"><span className="brand-mark">S</span>SkillShare</Link>
+      <Link className="brand" to="/browse" onClick={handleBrandClick}>
+        <span className="brand-mark">S</span>SkillShare
+      </Link>
       <div className="nav-links">
-        <NavLink className="nav-link" to="/browse">
+        <NavLink className="nav-link" to="/browse" onClick={handleBrowseClick}>
           <FaCompass className="nav-icon" aria-hidden="true" />
           <span>Browse</span>
         </NavLink>

@@ -21,7 +21,6 @@ function AdminDashboard() {
       const res = await getAdminStats(token);
       setStats(res.data);
     } catch {
-      // silent
     }
   };
 
@@ -85,7 +84,6 @@ function AdminDashboard() {
 
       {error && <p className="alert" style={{ marginBottom: 16 }}>{error}</p>}
 
-      {/* ===== KPI CARDS ===== */}
       {stats && (
         <section className="dashboard-stats dashboard-stats-extended">
           <div className="stat-card">
@@ -115,7 +113,6 @@ function AdminDashboard() {
         </section>
       )}
 
-      {/* ===== CHART ===== */}
       {stats && stats.roleChart && stats.roleChart.length > 0 && (
         <section className="dashboard-chart-card" style={{ marginBottom: 24 }}>
           <h3 className="dashboard-chart-title">
@@ -154,7 +151,7 @@ function AdminDashboard() {
           onClick={() => setActiveTab("escalated")}
         >
           <FaShieldAlt aria-hidden="true" />
-          <span>Escalated</span>
+          <span>Moderation</span>
           {escalatedCount > 0 && (
             <span className="admin-tab-badge">{escalatedCount}</span>
           )}
